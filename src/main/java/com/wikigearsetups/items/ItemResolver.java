@@ -149,6 +149,9 @@ public class ItemResolver
 			}
 		}
 
+		// trouver-locked "(l)" variants aren't always in the variation group
+		acceptable.addAll(index.idsByName(ItemNames.normalize(wiki + " (l)")));
+
 		// distinct upgrade items in other variation groups (Divine rune pouch
 		// for "Rune pouch") also satisfy the recommendation
 		for (String upgrade : ItemAliases.upgradesFor(wiki))

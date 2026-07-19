@@ -109,14 +109,14 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JLabel statusLabel = new JLabel(" ");
 	private final DefaultListModel<String> resultsModel = new DefaultListModel<>();
 	private final JList<String> resultsList = new JList<>(resultsModel);
-	private final JButton wikiLinkButton = new JButton("Open wiki page");
+	private final JButton wikiLinkButton = new RoundedButton("Open wiki page");
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
 	private final JTextField tagNameField = new JTextField();
 	private final JComboBox<IconOption> iconCombo = new JComboBox<>();
-	private final JButton importButton = new JButton("Import as bank tag");
+	private final JButton importButton = RoundedButton.accent("Import as bank tag");
 
 	private List<SearchResult> searchResults = Collections.emptyList();
 	private String currentPageTitle;
@@ -136,6 +136,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		BankTagImporter importer, ItemNameIndex itemNameIndex, ItemManager itemManager,
 		ClientThread clientThread, WikiGearSetupsConfig config)
 	{
+		super(false);
 		this.wikiClient = wikiClient;
 		this.ownershipResolver = ownershipResolver;
 		this.inventoryResolver = inventoryResolver;
@@ -146,11 +147,14 @@ public class WikiGearSetupsPanel extends PluginPanel
 		this.clientThread = clientThread;
 		this.config = config;
 
-		setLayout(new BorderLayout(0, 6));
+		setLayout(new BorderLayout(0, 8));
 		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
+		// header: logo, search, status — always visible
 		JPanel north = new JPanel();
 		north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+		north.setOpaque(false);
 		JLabel banner = loadBanner();
 		if (banner != null)
 		{
@@ -159,22 +163,26 @@ public class WikiGearSetupsPanel extends PluginPanel
 			north.add(Box.createVerticalStrut(8));
 		}
 		JPanel searchRow = new JPanel(new BorderLayout(4, 0));
+		searchRow.setOpaque(false);
 		searchRow.setAlignmentX(LEFT_ALIGNMENT);
-		JButton searchButton = new JButton("Search");
-		searchButton.setFocusPainted(false);
+		JButton searchButton = new RoundedButton("Search");
+		styleTextField(searchField);
 		searchField.addActionListener(e -> doSearch());
 		searchButton.addActionListener(e -> doSearch());
 		searchRow.add(searchField, BorderLayout.CENTER);
 		searchRow.add(searchButton, BorderLayout.EAST);
-		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, searchField.getPreferredSize().height + 6));
+		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, searchButton.getPreferredSize().height + 4));
 		north.add(searchRow);
+		north.add(Box.createVerticalStrut(4));
 		statusLabel.setAlignmentX(LEFT_ALIGNMENT);
 		statusLabel.setFont(FontManager.getRunescapeSmallFont());
 		north.add(statusLabel);
 		add(north, BorderLayout.NORTH);
 
-		JPanel center = new JPanel();
-		center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+		// middle: everything else scrolls when the client window is short
+		JPanel flow = new JPanel();
+		flow.setLayout(new BoxLayout(flow, BoxLayout.Y_AXIS));
+		flow.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
 		resultsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		resultsList.setVisibleRowCount(6);
@@ -190,16 +198,19 @@ public class WikiGearSetupsPanel extends PluginPanel
 		});
 		JScrollPane resultsScroll = new JScrollPane(resultsList);
 		resultsScroll.setAlignmentX(LEFT_ALIGNMENT);
-		center.add(resultsScroll);
-		center.add(Box.createVerticalStrut(4));
+		resultsScroll.setBorder(BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_HOVER_COLOR));
+		flow.add(resultsScroll);
+		flow.add(Box.createVerticalStrut(6));
 
 		wikiLinkButton.setAlignmentX(LEFT_ALIGNMENT);
 		wikiLinkButton.setVisible(false);
 		wikiLinkButton.addActionListener(e -> openWikiPage());
-		center.add(wikiLinkButton);
-		center.add(Box.createVerticalStrut(4));
+		flow.add(wikiLinkButton);
+		flow.add(Box.createVerticalStrut(6));
 
 		setupCombo.setAlignmentX(LEFT_ALIGNMENT);
+		setupCombo.setToolTipText("Gear style from the wiki page");
+		styleCombo(setupCombo);
 		setupCombo.addActionListener(e ->
 		{
 			if (!updatingCombos)
@@ -213,10 +224,12 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 		});
 		setupCombo.setVisible(false);
-		center.add(setupCombo);
-		center.add(Box.createVerticalStrut(4));
+		flow.add(setupCombo);
+		flow.add(Box.createVerticalStrut(4));
 
 		inventoryCombo.setAlignmentX(LEFT_ALIGNMENT);
+		inventoryCombo.setToolTipText("Inventory table to include on the right half");
+		styleCombo(inventoryCombo);
 		inventoryCombo.addActionListener(e ->
 		{
 			if (!updatingCombos)
@@ -227,28 +240,28 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 		});
 		inventoryCombo.setVisible(false);
-		center.add(inventoryCombo);
-		center.add(Box.createVerticalStrut(6));
+		flow.add(inventoryCombo);
+		flow.add(Box.createVerticalStrut(8));
 
 		gridPanel.setAlignmentX(LEFT_ALIGNMENT);
 		gridPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		gridPanel.setBorder(BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_HOVER_COLOR));
-		center.add(gridPanel);
-		center.add(Box.createVerticalStrut(6));
+		flow.add(gridPanel);
+		flow.add(Box.createVerticalStrut(8));
 
 		previewPanel.setLayout(new BoxLayout(previewPanel, BoxLayout.Y_AXIS));
+		previewPanel.setOpaque(false);
 		previewPanel.setAlignmentX(LEFT_ALIGNMENT);
-		center.add(previewPanel);
+		flow.add(previewPanel);
+		flow.add(Box.createVerticalStrut(8));
 
-		add(center, BorderLayout.CENTER);
-
-		JPanel south = new JPanel();
-		south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
 		tagNameField.getDocument().addDocumentListener(userEditListener(() -> tagNameField.hasFocus(), () -> userEditedTag = true));
-		south.add(labeledRow("Tag name", tagNameField));
-		south.add(Box.createVerticalStrut(4));
+		styleTextField(tagNameField);
+		flow.add(labeledRow("Tag name", tagNameField));
+		flow.add(Box.createVerticalStrut(4));
 		iconCombo.setRenderer(new IconOptionRenderer());
 		iconCombo.setMaximumRowCount(12);
+		styleCombo(iconCombo);
 		iconCombo.addActionListener(e ->
 		{
 			if (!updatingCombos)
@@ -256,18 +269,46 @@ public class WikiGearSetupsPanel extends PluginPanel
 				userEditedIcon = true;
 			}
 		});
-		south.add(labeledRow("Tab icon", iconCombo));
-		south.add(Box.createVerticalStrut(6));
+		flow.add(labeledRow("Tab icon", iconCombo));
+		flow.add(Box.createVerticalStrut(8));
 		importButton.setEnabled(false);
+		importButton.setToolTipText("Creates or updates a bank tag tab with this layout");
 		importButton.setAlignmentX(LEFT_ALIGNMENT);
 		importButton.setFont(importButton.getFont().deriveFont(Font.BOLD));
-		importButton.setFocusPainted(false);
 		importButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, importButton.getPreferredSize().height));
 		importButton.addActionListener(e -> doImport());
-		south.add(importButton);
-		south.add(Box.createVerticalStrut(8));
-		south.add(footer());
-		add(south, BorderLayout.SOUTH);
+		flow.add(importButton);
+
+		// top-aligned wrapper so the flow keeps its natural height in the viewport
+		JPanel flowWrapper = new JPanel(new BorderLayout());
+		flowWrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		flowWrapper.add(flow, BorderLayout.NORTH);
+		JScrollPane scroll = new JScrollPane(flowWrapper,
+			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		scroll.setBorder(null);
+		scroll.getVerticalScrollBar().setUnitIncrement(16);
+		scroll.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
+		add(scroll, BorderLayout.CENTER);
+
+		// footer pinned to the very bottom regardless of content height
+		add(footer(), BorderLayout.SOUTH);
+	}
+
+	private static void styleTextField(JTextField field)
+	{
+		field.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		field.setForeground(Color.WHITE);
+		field.setCaretColor(Color.WHITE);
+		field.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_HOVER_COLOR),
+			BorderFactory.createEmptyBorder(4, 6, 4, 6)));
+	}
+
+	private static void styleCombo(JComboBox<?> combo)
+	{
+		combo.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		combo.setForeground(Color.WHITE);
+		combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, combo.getPreferredSize().height + 6));
 	}
 
 	/** Plugin logo shipped as resources/com/wikigearsetups/banner.png, or null when absent. */
@@ -290,18 +331,19 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private JPanel footer()
 	{
 		JPanel footer = new JPanel(new BorderLayout(4, 0));
-		footer.setAlignmentX(LEFT_ALIGNMENT);
+		footer.setOpaque(false);
+		footer.setBorder(BorderFactory.createCompoundBorder(
+			BorderFactory.createMatteBorder(1, 0, 0, 0, ColorScheme.DARKER_GRAY_HOVER_COLOR),
+			BorderFactory.createEmptyBorder(6, 0, 0, 0)));
 		JLabel dev = new JLabel("Developed by " + DEVELOPER_NAME);
 		dev.setFont(FontManager.getRunescapeSmallFont());
 		dev.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
 		footer.add(dev, BorderLayout.WEST);
-		JButton donate = new JButton("Donate ♥");
+		JButton donate = new RoundedButton("Donate ♥");
 		donate.setFont(FontManager.getRunescapeSmallFont());
-		donate.setFocusPainted(false);
-		donate.setMargin(new java.awt.Insets(1, 6, 1, 6));
+		donate.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
 		donate.addActionListener(e -> LinkBrowser.browse(DONATION_URL));
 		footer.add(donate, BorderLayout.EAST);
-		footer.setMaximumSize(new Dimension(Integer.MAX_VALUE, donate.getPreferredSize().height + 2));
 		return footer;
 	}
 
@@ -1002,6 +1044,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static JPanel labeledRow(String label, java.awt.Component field)
 	{
 		JPanel row = new JPanel(new BorderLayout(6, 0));
+		row.setOpaque(false);
 		JLabel l = new JLabel(label);
 		l.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		row.add(l, BorderLayout.WEST);

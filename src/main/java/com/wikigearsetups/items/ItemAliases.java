@@ -12,9 +12,11 @@ import java.util.Map;
  * Generic names — the wiki writes "Imbued god cape" but no item carries that
  * name; any of the concrete god capes satisfies it.
  *
- * Upgrades — distinct items (separate variation groups) where owning the
- * better one satisfies a recommendation for the lesser: a Divine rune pouch
- * IS a rune pouch. Chains are resolved transitively and must stay acyclic.
+ * Upgrades — distinct items (separate variation groups, often differently
+ * named) where owning the better or equivalent one satisfies a
+ * recommendation for the lesser: a Divine rune pouch IS a rune pouch, an
+ * Uncharged trident IS a trident of the seas. Chains resolve transitively
+ * and must stay acyclic.
  */
 public final class ItemAliases
 {
@@ -23,22 +25,52 @@ public final class ItemAliases
 
 	static
 	{
-		GENERIC.put("god cape", Arrays.asList(
-			"Saradomin cape", "Guthix cape", "Zamorak cape"));
-		GENERIC.put("imbued god cape", Arrays.asList(
+		generic("God cape", "Saradomin cape", "Guthix cape", "Zamorak cape");
+		generic("Imbued god cape",
 			"Imbued saradomin cape", "Imbued guthix cape", "Imbued zamorak cape",
-			"Imbued saradomin max cape", "Imbued guthix max cape", "Imbued zamorak max cape"));
-		GENERIC.put("god book", Arrays.asList(
+			"Imbued saradomin max cape", "Imbued guthix max cape", "Imbued zamorak max cape");
+		generic("God book",
 			"Holy book", "Book of balance", "Unholy book",
-			"Book of law", "Book of war", "Book of darkness"));
+			"Book of law", "Book of war", "Book of darkness");
 
-		UPGRADES.put("rune pouch", Arrays.asList(
-			"Rune pouch (l)", "Divine rune pouch", "Divine rune pouch (l)"));
-		UPGRADES.put("divine rune pouch", Collections.singletonList(
-			"Divine rune pouch (l)"));
-		UPGRADES.put("saradomin cape", Collections.singletonList("Imbued saradomin cape"));
-		UPGRADES.put("guthix cape", Collections.singletonList("Imbued guthix cape"));
-		UPGRADES.put("zamorak cape", Collections.singletonList("Imbued zamorak cape"));
+		upgrade("Rune pouch", "Rune pouch (l)", "Divine rune pouch", "Divine rune pouch (l)");
+		upgrade("Divine rune pouch", "Divine rune pouch (l)");
+		upgrade("Saradomin cape", "Imbued saradomin cape");
+		upgrade("Guthix cape", "Imbued guthix cape");
+		upgrade("Zamorak cape", "Imbued zamorak cape");
+		upgrade("Toxic blowpipe", "Toxic blowpipe (empty)", "Blazing blowpipe", "Blazing blowpipe (empty)");
+		upgrade("Blazing blowpipe", "Blazing blowpipe (empty)");
+		// Dizana's quiver outclasses the assemblers
+		upgrade("Ava's accumulator", "Ava's assembler");
+		upgrade("Ava's assembler",
+			"Masori assembler", "Dizana's quiver (uncharged)", "Dizana's quiver",
+			"Blessed dizana's quiver", "Dizana's max cape");
+		upgrade("Masori assembler", "Masori assembler max cape");
+		upgrade("Dizana's quiver", "Blessed dizana's quiver", "Dizana's max cape");
+		// charged weapons whose uncharged state carries a different name
+		upgrade("Trident of the seas", "Uncharged trident", "Trident of the seas (full)");
+		upgrade("Trident of the seas (e)", "Uncharged trident (e)", "Trident of the seas (full) (e)");
+		upgrade("Trident of the swamp", "Uncharged toxic trident");
+		upgrade("Trident of the swamp (e)", "Uncharged toxic trident (e)");
+		upgrade("Toxic staff of the dead", "Toxic staff (uncharged)");
+		// the slayer helmet is an assembled black mask
+		upgrade("Black mask", "Slayer helmet");
+		upgrade("Black mask (i)", "Slayer helmet (i)");
+		upgrade("Void knight top", "Elite void top");
+		upgrade("Void knight robe", "Elite void robe");
+		upgrade("Salve amulet", "Salve amulet (e)", "Salve amulet (i)", "Salve amulet (ei)");
+		upgrade("Salve amulet (e)", "Salve amulet (ei)");
+		upgrade("Salve amulet (i)", "Salve amulet (ei)");
+	}
+
+	private static void generic(String name, String... concrete)
+	{
+		GENERIC.put(ItemNames.normalize(name), Arrays.asList(concrete));
+	}
+
+	private static void upgrade(String name, String... betterItems)
+	{
+		UPGRADES.put(ItemNames.normalize(name), Arrays.asList(betterItems));
 	}
 
 	private ItemAliases()

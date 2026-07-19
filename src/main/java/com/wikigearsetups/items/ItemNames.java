@@ -9,12 +9,17 @@ public final class ItemNames
 	{
 	}
 
-	/** Lowercase, straight apostrophes, collapsed whitespace. */
+	/**
+	 * Lowercase, straight apostrophes, collapsed whitespace, and no space
+	 * before parentheses — the game is inconsistent ("Salve amulet(i)" but
+	 * "Ring of suffering (i)") and the wiki always writes the space.
+	 */
 	public static String normalize(String name)
 	{
 		return name
 			.replace('’', '\'')
 			.toLowerCase(Locale.ROOT)
+			.replaceAll("\\s+\\(", "(")
 			.replaceAll("\\s+", " ")
 			.trim();
 	}

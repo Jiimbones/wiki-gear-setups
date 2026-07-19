@@ -91,4 +91,11 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Panel polish: banner slot (resources/com/wikigearsetups/banner.png, graceful when absent — **user must drop the logo file in**), item sprites on preview rows, styled search/import buttons, footer "Developed by Jiimbones" + Donate button (placeholder URL)
 - [x] runelite-plugin.properties author=Jiimbones
 - [x] 14 new tests; 96 total green
+
+## Feedback round 5 (2026-07-19)
+- [x] Logo bundled: G:\Downloads\wikibanktagslogo.png → resources banner.png (418x279, 111KB, transparent bg, HiDPI 2x of panel width)
+- [x] UI overhaul: PluginPanel(false) + BorderLayout — header (logo/search/status) pinned top, middle content in its own JScrollPane (height-resize safe), footer (dev + donate) pinned to true bottom; `RoundedButton` (custom paint, hover/press, accent variant for Import); dark-styled text fields/combos/results list; tooltips
+- [x] Normalize kills space-before-paren both sides ("Salve amulet(i)" == "Salve amulet (i)") — whole-class fix for game/wiki naming divergence
+- [x] Upgrade chains: blowpipe (empty/Blazing), assembler lineage (accumulator→assembler→masori/Dizana's quiver tiers, transitive), tridents ↔ uncharged names, toxic staff, black mask→slayer helm (tier-safe), void→elite, salve amulet tiers; trouver "(l)" direct-name lookup fixed for normalize
+- [x] 5 new tests; 101 total green
 - [ ] User visual verification in dev client

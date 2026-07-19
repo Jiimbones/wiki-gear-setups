@@ -200,6 +200,62 @@ public class ItemResolverTest
 	}
 
 	@Test
+	public void parenSpacingDifferencesAreNormalizedAway()
+	{
+		// the game says "Salve amulet(ei)", the wiki says "Salve amulet (ei)"
+		ItemResolver r = resolver(12018, "Salve amulet(ei)");
+		assertTrue(r.resolve("Salve amulet (ei)").isPresent());
+	}
+
+	@Test
+	public void blazingBlowpipeSatisfiesToxicBlowpipe()
+	{
+		ItemResolver r = resolver(
+			12926, "Toxic blowpipe",
+			30374, "Blazing blowpipe");
+		ResolvedItem item = r.resolve("Toxic blowpipe").orElseThrow(AssertionError::new);
+		assertTrue(item.getAcceptableIds().contains(30374));
+	}
+
+	@Test
+	public void quiverSatisfiesAssemblerTransitivelyFromAccumulator()
+	{
+		ItemResolver r = resolver(
+			10499, "Ava's accumulator",
+			22109, "Ava's assembler",
+			28955, "Blessed dizana's quiver");
+		ResolvedItem item = r.resolve("Ava's accumulator").orElseThrow(AssertionError::new);
+		assertTrue("assembler satisfies accumulator", item.getAcceptableIds().contains(22109));
+		assertTrue("quiver satisfies accumulator via assembler", item.getAcceptableIds().contains(28955));
+	}
+
+	@Test
+	public void unchargedTridentSatisfiesTridentOfTheSeas()
+	{
+		ItemResolver r = resolver(
+			11905, "Trident of the seas",
+			11908, "Uncharged trident");
+		ResolvedItem item = r.resolve("Trident of the seas").orElseThrow(AssertionError::new);
+		assertTrue(item.getAcceptableIds().contains(11908));
+	}
+
+	@Test
+	public void slayerHelmetSatisfiesBlackMaskButNotImbued()
+	{
+		ItemResolver r = resolver(
+			BLACK_MASK, "Black mask",
+			BLACK_MASK_I, "Black mask (i)",
+			SLAYER_HELMET, "Slayer helmet",
+			SLAYER_HELMET_I, "Slayer helmet (i)");
+		ResolvedItem plain = r.resolve("Black mask").orElseThrow(AssertionError::new);
+		assertTrue(plain.getAcceptableIds().contains(SLAYER_HELMET));
+		ResolvedItem imbued = r.resolve("Black mask (i)").orElseThrow(AssertionError::new);
+		assertTrue(imbued.getAcceptableIds().contains(SLAYER_HELMET_I));
+		assertFalse("plain slayer helm must not satisfy imbued mask",
+			imbued.getAcceptableIds().contains(SLAYER_HELMET));
+	}
+
+	@Test
 	public void stripChargeDecorations()
 	{
 		assertEquals("black mask (i)", ItemNames.stripChargeDecorations("black mask (10) (i)"));
