@@ -135,6 +135,62 @@ public class OwnershipResolverTest
 	}
 
 	@Test
+	public void ownedSetPieceStillSkippedWhenSetNotWornInLayout()
+	{
+		// full blood moon set banked, but a better body wins the body slot —
+		// the helm must not ride along on ownership alone
+		int bandos = 11832;
+		OwnershipResolver r = new OwnershipResolver(new ItemResolver(FakeItemNameIndex.of(
+			BLOOD_MOON_HELM, "Blood moon helm",
+			BLOOD_MOON_CHEST, "Blood moon chestplate",
+			BLOOD_MOON_TASSETS, "Blood moon tassets",
+			DUAL_MACUAHUITL, "Dual macuahuitl",
+			NEITIZNOT_FACEGUARD, "Neitiznot faceguard",
+			bandos, "Bandos chestplate")));
+
+		Map<EquipSlot, List<RankedItem>> slots = new EnumMap<>(EquipSlot.class);
+		slots.put(EquipSlot.HEAD, Arrays.asList(
+			new RankedItem("Blood moon helm", 1, FULL_SET_NOTE),
+			new RankedItem("Neitiznot faceguard", 2, null)));
+		slots.put(EquipSlot.BODY, Arrays.asList(
+			new RankedItem("Bandos chestplate", 1, null),
+			new RankedItem("Blood moon chestplate", 2, FULL_SET_NOTE)));
+		GearSetup s = new GearSetup("Test", slots);
+
+		SetupResolution resolution = r.resolve(s,
+			owned(BLOOD_MOON_HELM, BLOOD_MOON_CHEST, BLOOD_MOON_TASSETS, DUAL_MACUAHUITL,
+				NEITIZNOT_FACEGUARD, bandos),
+			MissingGearBehavior.OMIT, false);
+
+		assertEquals(2, resolution.getPicks().size());
+		assertEquals(NEITIZNOT_FACEGUARD, resolution.getPicks().get(0).getItemId());
+		assertEquals(bandos, resolution.getPicks().get(1).getItemId());
+	}
+
+	@Test
+	public void setPieceKeptWhenWholeSetIsWorn()
+	{
+		OwnershipResolver r = setResolver();
+		Map<EquipSlot, List<RankedItem>> slots = new EnumMap<>(EquipSlot.class);
+		slots.put(EquipSlot.HEAD, Arrays.asList(
+			new RankedItem("Blood moon helm", 1, FULL_SET_NOTE),
+			new RankedItem("Neitiznot faceguard", 2, null)));
+		slots.put(EquipSlot.BODY, Collections.singletonList(
+			new RankedItem("Blood moon chestplate", 1, null)));
+		slots.put(EquipSlot.LEGS, Collections.singletonList(
+			new RankedItem("Blood moon tassets", 1, null)));
+		slots.put(EquipSlot.WEAPON, Collections.singletonList(
+			new RankedItem("Dual macuahuitl", 1, null)));
+		GearSetup s = new GearSetup("Test", slots);
+
+		SetupResolution resolution = r.resolve(s,
+			owned(BLOOD_MOON_HELM, BLOOD_MOON_CHEST, BLOOD_MOON_TASSETS, DUAL_MACUAHUITL, NEITIZNOT_FACEGUARD),
+			MissingGearBehavior.OMIT, false);
+
+		assertEquals(BLOOD_MOON_HELM, resolution.getPicks().get(0).getItemId());
+	}
+
+	@Test
 	public void fullyGatedSlotStillShowsTopPieceAsGoal()
 	{
 		GearSetup s = setup(EquipSlot.HEAD,

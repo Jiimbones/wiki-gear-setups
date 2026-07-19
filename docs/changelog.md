@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-20: Set gate now requires the set WORN in the layout (slot-aware groups + fixpoint re-resolution), not merely banked — owning blood moon while Bandos wins the body slot no longer keeps the helm; 110 tests green.
 - 2026-07-20: Set-bonus gating — ItemSets table (void/crystal always; barrows/justiciar/obsidian/moon sets when footnote says full set); incomplete set → next best alternative picked; fully-gated slots keep the top piece as goal; 107 tests green.
 - 2026-07-19: UI fixes — slim themed scrollbars (SlimScrollBarUI), Scrollable viewport-width tracking (no more clipped combos), IconTextField search + FlatTextField tag name, explicit light-on-dark renderers for results list and combo popups; 101 tests green.
 - 2026-07-19: Feedback round 5 — bundled logo banner, dark-mode UI overhaul (rounded buttons, pinned header/footer, scrollable middle, resize-safe), paren-space normalization, upgrade chains (blowpipe/quiver/tridents/slayer helm/void/salve); 101 tests green.

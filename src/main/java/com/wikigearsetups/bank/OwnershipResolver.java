@@ -8,7 +8,9 @@ import com.wikigearsetups.wiki.EquipSlot;
 import com.wikigearsetups.wiki.GearSetup;
 import com.wikigearsetups.wiki.RankedItem;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,79 +39,145 @@ public class OwnershipResolver
 	public SetupResolution resolve(GearSetup setup, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
 		boolean assumeSlayerTask)
 	{
-		List<SlotPick> picks = new ArrayList<>();
 		Map<EquipSlot, List<String>> unresolved = new EnumMap<>(EquipSlot.class);
-		List<EquipSlot> emptySlots = new ArrayList<>();
+		Map<EquipSlot, Set<String>> excluded = new EnumMap<>(EquipSlot.class);
+		Map<EquipSlot, SlotPick> pickBySlot = new EnumMap<>(EquipSlot.class);
 
 		for (Map.Entry<EquipSlot, List<RankedItem>> entry : setup.getSlots().entrySet())
 		{
-			EquipSlot slot = entry.getKey();
-			List<RankedItem> alternatives = entry.getValue();
-
-			SlotPick pick = null;
-			RankedItem bestResolvable = null;
-			ResolvedItem bestResolved = null;
-			// tracked ignoring the set gate, so a slot whose every alternative
-			// needs an unowned set still shows the top piece as a goal
-			RankedItem bestAnyResolvable = null;
-			ResolvedItem bestAnyResolved = null;
-
-			for (int i = 0; i < alternatives.size(); i++)
+			excluded.put(entry.getKey(), new HashSet<>());
+			SlotPick pick = resolveSlot(entry.getKey(), entry.getValue(), ownedIds, missingBehavior,
+				assumeSlayerTask, excluded.get(entry.getKey()), unresolved);
+			if (pick != null)
 			{
-				RankedItem candidate = alternatives.get(i);
-				if (!assumeSlayerTask && isSlayerTaskConditional(candidate))
-				{
-					continue;
-				}
-				Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
-				if (!resolved.isPresent())
-				{
-					unresolved.computeIfAbsent(slot, k -> new ArrayList<>()).add(candidate.getName());
-					continue;
-				}
-				if (bestAnyResolvable == null)
-				{
-					bestAnyResolvable = candidate;
-					bestAnyResolved = resolved.get();
-				}
-				if (!setSatisfied(candidate, ownedIds))
-				{
-					continue;
-				}
-				if (bestResolvable == null)
-				{
-					bestResolvable = candidate;
-					bestResolved = resolved.get();
-				}
-
-				Integer ownedId = firstOwned(resolved.get(), ownedIds);
-				if (ownedId != null)
-				{
-					pick = new SlotPick(slot, candidate, ownedId, true, i == 0);
-					break;
-				}
+				pickBySlot.put(entry.getKey(), pick);
 			}
+		}
 
-			if (bestResolvable == null)
+		// A set piece must actually be WORN in this layout, not just banked:
+		// owning the full blood moon set doesn't justify the helm when better
+		// body/legs win their slots. Excluding a piece can invalidate another
+		// set piece, so iterate to a fixpoint (exclusions only grow).
+		boolean changed = true;
+		while (changed)
+		{
+			changed = false;
+			for (Map.Entry<EquipSlot, List<RankedItem>> entry : setup.getSlots().entrySet())
 			{
-				bestResolvable = bestAnyResolvable;
-				bestResolved = bestAnyResolved;
+				SlotPick pick = pickBySlot.get(entry.getKey());
+				if (pick == null || !pick.isOwned())
+				{
+					continue;
+				}
+				RankedItem item = pick.getItem();
+				ItemSets.Requirement requirement = ItemSets.requirementFor(item.getName());
+				if (requirement == null
+					|| (!requirement.isAlways() && !ItemSets.setConditionalNote(item.getNote()))
+					|| setWornInLayout(requirement, pickBySlot, ownedIds))
+				{
+					continue;
+				}
+				excluded.get(entry.getKey()).add(item.getName());
+				SlotPick replacement = resolveSlot(entry.getKey(), entry.getValue(), ownedIds,
+					missingBehavior, assumeSlayerTask, excluded.get(entry.getKey()), null);
+				if (replacement != null)
+				{
+					pickBySlot.put(entry.getKey(), replacement);
+				}
+				else
+				{
+					pickBySlot.remove(entry.getKey());
+				}
+				changed = true;
 			}
+		}
+
+		List<SlotPick> picks = new ArrayList<>();
+		List<EquipSlot> emptySlots = new ArrayList<>();
+		for (Map.Entry<EquipSlot, List<RankedItem>> entry : setup.getSlots().entrySet())
+		{
+			SlotPick pick = pickBySlot.get(entry.getKey());
 			if (pick != null)
 			{
 				picks.add(pick);
 			}
-			else if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED && bestResolvable != null)
-			{
-				picks.add(new SlotPick(slot, bestResolvable, bestResolved.getPrimaryId(), false, true));
-			}
 			else
 			{
-				emptySlots.add(slot);
+				emptySlots.add(entry.getKey());
+			}
+		}
+		return new SetupResolution(setup, picks, unresolved, emptySlots);
+	}
+
+	/**
+	 * Resolves one slot: first satisfiable alternative wins; under
+	 * SHOW_BEST_UNOWNED an unowned best becomes a goal pick; null when the
+	 * slot stays empty. {@code unresolved} is only recorded when non-null so
+	 * re-resolution during set stabilization doesn't duplicate entries.
+	 */
+	private SlotPick resolveSlot(EquipSlot slot, List<RankedItem> alternatives, Set<Integer> ownedIds,
+		MissingGearBehavior missingBehavior, boolean assumeSlayerTask,
+		Set<String> excludedNames, Map<EquipSlot, List<String>> unresolved)
+	{
+		RankedItem bestResolvable = null;
+		ResolvedItem bestResolved = null;
+		// tracked ignoring the set gate, so a slot whose every alternative
+		// needs an unowned set still shows the top piece as a goal
+		RankedItem bestAnyResolvable = null;
+		ResolvedItem bestAnyResolved = null;
+
+		for (int i = 0; i < alternatives.size(); i++)
+		{
+			RankedItem candidate = alternatives.get(i);
+			if (excludedNames.contains(candidate.getName()))
+			{
+				continue;
+			}
+			if (!assumeSlayerTask && isSlayerTaskConditional(candidate))
+			{
+				continue;
+			}
+			Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+			if (!resolved.isPresent())
+			{
+				if (unresolved != null)
+				{
+					unresolved.computeIfAbsent(slot, k -> new ArrayList<>()).add(candidate.getName());
+				}
+				continue;
+			}
+			if (bestAnyResolvable == null)
+			{
+				bestAnyResolvable = candidate;
+				bestAnyResolved = resolved.get();
+			}
+			if (!setSatisfied(candidate, ownedIds))
+			{
+				continue;
+			}
+			if (bestResolvable == null)
+			{
+				bestResolvable = candidate;
+				bestResolved = resolved.get();
+			}
+
+			Integer ownedId = firstOwned(resolved.get(), ownedIds);
+			if (ownedId != null)
+			{
+				return new SlotPick(slot, candidate, ownedId, true, i == 0);
 			}
 		}
 
-		return new SetupResolution(setup, picks, unresolved, emptySlots);
+		if (bestResolvable == null)
+		{
+			bestResolvable = bestAnyResolvable;
+			bestResolved = bestAnyResolved;
+		}
+		if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED && bestResolvable != null)
+		{
+			return new SlotPick(slot, bestResolvable, bestResolved.getPrimaryId(), false, true);
+		}
+		return null;
 	}
 
 	/**
@@ -130,14 +198,41 @@ public class OwnershipResolver
 		{
 			return true;
 		}
-		for (List<String> group : requirement.getOtherPieces())
+		for (ItemSets.PieceGroup group : requirement.getOtherPieces())
 		{
-			if (!anyOwned(group, ownedIds))
+			if (!anyOwned(group.getNames(), ownedIds))
 			{
 				return false;
 			}
 		}
-		return requirement.getWeapons().isEmpty() || anyOwned(requirement.getWeapons(), ownedIds);
+		return true;
+	}
+
+	/**
+	 * A required group counts as worn when its piece IS the pick for its
+	 * slot, or when the piece is owned and its slot isn't claimed by some
+	 * other owned pick (the player would naturally fill it with the set
+	 * piece — also covers setups that don't list that slot at all).
+	 */
+	private boolean setWornInLayout(ItemSets.Requirement requirement,
+		Map<EquipSlot, SlotPick> pickBySlot, Set<Integer> ownedIds)
+	{
+		for (ItemSets.PieceGroup group : requirement.getOtherPieces())
+		{
+			SlotPick slotPick = pickBySlot.get(group.getSlot());
+			if (slotPick != null && slotPick.isOwned())
+			{
+				if (!anyOwned(group.getNames(), Collections.singleton(slotPick.getItemId())))
+				{
+					return false;
+				}
+			}
+			else if (!anyOwned(group.getNames(), ownedIds))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private boolean anyOwned(List<String> names, Set<Integer> ownedIds)

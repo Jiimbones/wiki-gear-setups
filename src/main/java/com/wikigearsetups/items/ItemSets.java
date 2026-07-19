@@ -1,5 +1,6 @@
 package com.wikigearsetups.items;
 
+import com.wikigearsetups.wiki.EquipSlot;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,20 +22,44 @@ import java.util.Map;
  * that particular recommendation says "full/complete ... set". The same
  * item can appear both gated (rank 2, with note) and ungated (rank 3,
  * standalone) on one page — Amoxliatl's Dual macuahuitl does exactly this.
+ *
+ * Each required group carries the equipment slot it occupies so the
+ * resolver can distinguish "worn in this layout" from merely "banked".
  */
 public final class ItemSets
 {
+	/** One required slot of a set: any of these names, worn in {@code slot}. */
+	public static final class PieceGroup
+	{
+		private final EquipSlot slot;
+		private final List<String> names;
+
+		private PieceGroup(EquipSlot slot, List<String> names)
+		{
+			this.slot = slot;
+			this.names = names;
+		}
+
+		public EquipSlot getSlot()
+		{
+			return slot;
+		}
+
+		public List<String> getNames()
+		{
+			return names;
+		}
+	}
+
 	public static final class Requirement
 	{
 		private final boolean always;
-		private final List<List<String>> otherPieces;
-		private final List<String> weapons;
+		private final List<PieceGroup> otherPieces;
 
-		private Requirement(boolean always, List<List<String>> otherPieces, List<String> weapons)
+		private Requirement(boolean always, List<PieceGroup> otherPieces)
 		{
 			this.always = always;
 			this.otherPieces = otherPieces;
-			this.weapons = weapons;
 		}
 
 		public boolean isAlways()
@@ -42,16 +67,10 @@ public final class ItemSets
 			return always;
 		}
 
-		/** Any-of groups, one per other slot in the set; all groups must be owned. */
-		public List<List<String>> getOtherPieces()
+		/** All groups must be satisfied for the piece to be worth wearing. */
+		public List<PieceGroup> getOtherPieces()
 		{
 			return otherPieces;
-		}
-
-		/** Non-empty means one of these weapons must also be owned. */
-		public List<String> getWeapons()
-		{
-			return weapons;
 		}
 	}
 
@@ -59,25 +78,29 @@ public final class ItemSets
 
 	static
 	{
-		armourSet(true, Collections.emptyList(),
-			group("Void melee helm", "Void ranger helm", "Void mage helm"),
-			group("Void knight top", "Elite void top"),
-			group("Void knight robe", "Elite void robe"),
-			group("Void knight gloves"));
+		armourSet(true,
+			group(EquipSlot.HEAD, "Void melee helm", "Void ranger helm", "Void mage helm"),
+			group(EquipSlot.BODY, "Void knight top", "Elite void top"),
+			group(EquipSlot.LEGS, "Void knight robe", "Elite void robe"),
+			group(EquipSlot.HANDS, "Void knight gloves"));
 
 		// crystal armour only shines behind a crystal bow — per-piece, no set needed
-		List<String> crystalBows = Arrays.asList(
+		PieceGroup crystalBows = group(EquipSlot.WEAPON,
 			"Bow of faerdhinen", "Bow of faerdhinen (c)", "Bow of faerdhinen (inactive)", "Crystal bow");
 		for (String piece : new String[]{"Crystal helm", "Crystal body", "Crystal legs"})
 		{
 			BY_PIECE.put(ItemNames.normalize(piece),
-				new Requirement(true, Collections.emptyList(), crystalBows));
+				new Requirement(true, Collections.singletonList(crystalBows)));
 		}
 
-		armourSet(false, Collections.emptyList(),
-			group("Justiciar faceguard"), group("Justiciar chestguard"), group("Justiciar legguards"));
-		armourSet(false, Collections.emptyList(),
-			group("Obsidian helmet"), group("Obsidian platebody"), group("Obsidian platelegs"));
+		armourSet(false,
+			group(EquipSlot.HEAD, "Justiciar faceguard"),
+			group(EquipSlot.BODY, "Justiciar chestguard"),
+			group(EquipSlot.LEGS, "Justiciar legguards"));
+		armourSet(false,
+			group(EquipSlot.HEAD, "Obsidian helmet"),
+			group(EquipSlot.BODY, "Obsidian platebody"),
+			group(EquipSlot.LEGS, "Obsidian platelegs"));
 
 		barrows("Ahrim's hood", "Ahrim's robetop", "Ahrim's robeskirt", "Ahrim's staff");
 		barrows("Dharok's helm", "Dharok's platebody", "Dharok's platelegs", "Dharok's greataxe");
@@ -91,34 +114,35 @@ public final class ItemSets
 		moonSet("Eclipse moon helm", "Eclipse moon chestplate", "Eclipse moon tassets", "Eclipse atlatl");
 	}
 
-	private static List<String> group(String... names)
+	private static PieceGroup group(EquipSlot slot, String... names)
 	{
-		return Arrays.asList(names);
+		return new PieceGroup(slot, Arrays.asList(names));
 	}
 
-	private static void barrows(String... pieces)
+	private static void barrows(String helm, String body, String legs, String weapon)
 	{
-		List<List<String>> groups = new ArrayList<>();
-		for (String piece : pieces)
-		{
-			groups.add(group(piece));
-		}
-		armourSet(false, Collections.emptyList(), groups.toArray(new List[0]));
+		armourSet(false,
+			group(EquipSlot.HEAD, helm),
+			group(EquipSlot.BODY, body),
+			group(EquipSlot.LEGS, legs),
+			group(EquipSlot.WEAPON, weapon));
 	}
 
 	private static void moonSet(String helm, String chest, String legs, String weapon)
 	{
-		armourSet(false, Collections.emptyList(),
-			group(helm), group(chest), group(legs), group(weapon));
+		armourSet(false,
+			group(EquipSlot.HEAD, helm),
+			group(EquipSlot.BODY, chest),
+			group(EquipSlot.LEGS, legs),
+			group(EquipSlot.WEAPON, weapon));
 	}
 
 	/** Registers each member of each group with a requirement of all OTHER groups. */
-	@SafeVarargs
-	private static void armourSet(boolean always, List<String> weapons, List<String>... pieceGroups)
+	private static void armourSet(boolean always, PieceGroup... pieceGroups)
 	{
 		for (int i = 0; i < pieceGroups.length; i++)
 		{
-			List<List<String>> others = new ArrayList<>();
+			List<PieceGroup> others = new ArrayList<>();
 			for (int j = 0; j < pieceGroups.length; j++)
 			{
 				if (j != i)
@@ -126,8 +150,8 @@ public final class ItemSets
 					others.add(pieceGroups[j]);
 				}
 			}
-			Requirement requirement = new Requirement(always, others, weapons);
-			for (String piece : pieceGroups[i])
+			Requirement requirement = new Requirement(always, others);
+			for (String piece : pieceGroups[i].getNames())
 			{
 				BY_PIECE.put(ItemNames.normalize(piece), requirement);
 			}

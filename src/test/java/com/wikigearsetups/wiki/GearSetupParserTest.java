@@ -25,6 +25,21 @@ public class GearSetupParserTest
 	}
 
 	@Test
+	public void efnWithNamedParamStillYieldsNote()
+	{
+		// exact head2 syntax from Amoxliatl/Strategies — the |name= param must
+		// not displace the positional note text
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Melee"
+			+ "|head2={{plink|Blood moon helm}}{{efn|Best used with the full [[Blood moon armour]] set and [[Dual macuahuitl]]|name=Blood moon}}}}");
+
+		RankedItem helm = setups.get(0).getSlots().get(EquipSlot.HEAD).get(0);
+		assertEquals("Blood moon helm", helm.getName());
+		assertNotNull(helm.getNote());
+		assertTrue(helm.getNote().contains("full"));
+		assertTrue(helm.getNote().contains("set"));
+	}
+
+	@Test
 	public void zulrahParsesAllTabberSetups() throws IOException
 	{
 		List<GearSetup> setups = parser.parse(fixture("zulrah-strategies"));

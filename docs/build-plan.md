@@ -105,4 +105,6 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] OwnershipResolver.setSatisfied: gated candidate skipped → next-bis alternative wins (Amoxliatl blood moon helm case); per-recommendation via note so rank-3 standalone Dual macuahuitl stays ungated while rank-2 flagged one is gated; extras gated too
 - [x] Fully-gated slot + SHOW → top piece still shown as goal (bestAnyResolvable fallback)
 - [x] 6 new tests; 107 total green
+- [x] User feedback: still saw blood moon helm (owns the set) → gate upgraded from owned to WORN-in-layout: PieceGroup carries its EquipSlot; requirement met per group iff piece is the slot's owned pick, or slot has no owned pick and piece is owned; fixpoint re-resolution with per-slot exclusions; parser test for named-efn note ({{efn|...|name=X}})
+- [x] 3 new tests; 110 total green
 - [ ] User visual verification in dev client
