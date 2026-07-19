@@ -52,9 +52,9 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextField;
 import javax.swing.ImageIcon;
 import javax.swing.ListSelectionModel;
+import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
@@ -67,6 +67,8 @@ import net.runelite.client.plugins.banktags.tabs.Layout;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.ui.components.FlatTextField;
+import net.runelite.client.ui.components.IconTextField;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
@@ -105,7 +107,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final ClientThread clientThread;
 	private final WikiGearSetupsConfig config;
 
-	private final JTextField searchField = new JTextField();
+	private final IconTextField searchField = new IconTextField();
 	private final JLabel statusLabel = new JLabel(" ");
 	private final DefaultListModel<String> resultsModel = new DefaultListModel<>();
 	private final JList<String> resultsList = new JList<>(resultsModel);
@@ -114,7 +116,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
-	private final JTextField tagNameField = new JTextField();
+	private final FlatTextField tagNameField = new FlatTextField();
 	private final JComboBox<IconOption> iconCombo = new JComboBox<>();
 	private final JButton importButton = RoundedButton.accent("Import as bank tag");
 
@@ -166,12 +168,15 @@ public class WikiGearSetupsPanel extends PluginPanel
 		searchRow.setOpaque(false);
 		searchRow.setAlignmentX(LEFT_ALIGNMENT);
 		JButton searchButton = new RoundedButton("Search");
-		styleTextField(searchField);
+		searchField.setIcon(IconTextField.Icon.SEARCH);
+		searchField.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		searchField.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
+		searchField.setPreferredSize(new Dimension(0, 30));
 		searchField.addActionListener(e -> doSearch());
 		searchButton.addActionListener(e -> doSearch());
 		searchRow.add(searchField, BorderLayout.CENTER);
 		searchRow.add(searchButton, BorderLayout.EAST);
-		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, searchButton.getPreferredSize().height + 4));
+		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
 		north.add(searchRow);
 		north.add(Box.createVerticalStrut(4));
 		statusLabel.setAlignmentX(LEFT_ALIGNMENT);
@@ -187,7 +192,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		resultsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		resultsList.setVisibleRowCount(6);
 		resultsList.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		resultsList.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+		// explicit renderer — the client LAF's list colors are dark-on-dark here
+		resultsList.setCellRenderer(new DarkListRenderer());
 		resultsList.addListSelectionListener(e ->
 		{
 			int idx = resultsList.getSelectedIndex();
@@ -196,9 +202,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 				loadPage(searchResults.get(idx).getTitle());
 			}
 		});
-		JScrollPane resultsScroll = new JScrollPane(resultsList);
+		JScrollPane resultsScroll = new JScrollPane(resultsList,
+			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		resultsScroll.setAlignmentX(LEFT_ALIGNMENT);
 		resultsScroll.setBorder(BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_HOVER_COLOR));
+		SlimScrollBarUI.apply(resultsScroll.getVerticalScrollBar());
 		flow.add(resultsScroll);
 		flow.add(Box.createVerticalStrut(6));
 
@@ -255,8 +263,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 		flow.add(previewPanel);
 		flow.add(Box.createVerticalStrut(8));
 
-		tagNameField.getDocument().addDocumentListener(userEditListener(() -> tagNameField.hasFocus(), () -> userEditedTag = true));
-		styleTextField(tagNameField);
+		tagNameField.getDocument().addDocumentListener(userEditListener(
+			() -> tagNameField.getTextField().hasFocus(), () -> userEditedTag = true));
+		tagNameField.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		tagNameField.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
+		tagNameField.setPreferredSize(new Dimension(0, 26));
 		flow.add(labeledRow("Tag name", tagNameField));
 		flow.add(Box.createVerticalStrut(4));
 		iconCombo.setRenderer(new IconOptionRenderer());
@@ -279,36 +290,92 @@ public class WikiGearSetupsPanel extends PluginPanel
 		importButton.addActionListener(e -> doImport());
 		flow.add(importButton);
 
-		// top-aligned wrapper so the flow keeps its natural height in the viewport
-		JPanel flowWrapper = new JPanel(new BorderLayout());
-		flowWrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
-		flowWrapper.add(flow, BorderLayout.NORTH);
-		JScrollPane scroll = new JScrollPane(flowWrapper,
+		// Scrollable wrapper: tracks the viewport width so nothing can push
+		// past the panel edge, while keeping natural height for scrolling
+		JScrollPane scroll = new JScrollPane(new ScrollableWrapper(flow),
 			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 		scroll.setBorder(null);
-		scroll.getVerticalScrollBar().setUnitIncrement(16);
 		scroll.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
+		SlimScrollBarUI.apply(scroll.getVerticalScrollBar());
 		add(scroll, BorderLayout.CENTER);
 
 		// footer pinned to the very bottom regardless of content height
 		add(footer(), BorderLayout.SOUTH);
 	}
 
-	private static void styleTextField(JTextField field)
-	{
-		field.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		field.setForeground(Color.WHITE);
-		field.setCaretColor(Color.WHITE);
-		field.setBorder(BorderFactory.createCompoundBorder(
-			BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_HOVER_COLOR),
-			BorderFactory.createEmptyBorder(4, 6, 4, 6)));
-	}
-
+	/**
+	 * Caps the width so long labels can't push the combo past the panel edge
+	 * (the popup follows the combo width; labels ellipsize) and renders
+	 * entries with explicit light-on-dark colors.
+	 */
 	private static void styleCombo(JComboBox<?> combo)
 	{
 		combo.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		combo.setForeground(Color.WHITE);
-		combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, combo.getPreferredSize().height + 6));
+		int height = Math.max(26, combo.getPreferredSize().height);
+		combo.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 24, height));
+		combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
+		if (!(combo.getRenderer() instanceof DarkListRenderer))
+		{
+			combo.setRenderer(new DarkListRenderer());
+		}
+	}
+
+	/** Explicit light-on-dark cell colors for lists and combo popups. */
+	private static class DarkListRenderer extends DefaultListCellRenderer
+	{
+		@Override
+		public Component getListCellRendererComponent(JList<?> list, Object value,
+			int index, boolean isSelected, boolean cellHasFocus)
+		{
+			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+			label.setOpaque(true);
+			label.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+			label.setForeground(isSelected ? Color.WHITE : ColorScheme.LIGHT_GRAY_COLOR);
+			label.setBackground(isSelected ? ColorScheme.DARKER_GRAY_HOVER_COLOR : ColorScheme.DARKER_GRAY_COLOR);
+			return label;
+		}
+	}
+
+	/** Scroll content that always matches the viewport width, natural height. */
+	private static final class ScrollableWrapper extends JPanel implements Scrollable
+	{
+		ScrollableWrapper(java.awt.Component content)
+		{
+			super(new BorderLayout());
+			setBackground(ColorScheme.DARK_GRAY_COLOR);
+			add(content, BorderLayout.NORTH);
+		}
+
+		@Override
+		public Dimension getPreferredScrollableViewportSize()
+		{
+			return getPreferredSize();
+		}
+
+		@Override
+		public int getScrollableUnitIncrement(java.awt.Rectangle visibleRect, int orientation, int direction)
+		{
+			return 16;
+		}
+
+		@Override
+		public int getScrollableBlockIncrement(java.awt.Rectangle visibleRect, int orientation, int direction)
+		{
+			return 64;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportWidth()
+		{
+			return true;
+		}
+
+		@Override
+		public boolean getScrollableTracksViewportHeight()
+		{
+			return false;
+		}
 	}
 
 	/** Plugin logo shipped as resources/com/wikigearsetups/banner.png, or null when absent. */
@@ -378,7 +445,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 	}
 
-	private final class IconOptionRenderer extends DefaultListCellRenderer
+	private final class IconOptionRenderer extends DarkListRenderer
 	{
 		@Override
 		public Component getListCellRendererComponent(JList<?> list, Object value,
