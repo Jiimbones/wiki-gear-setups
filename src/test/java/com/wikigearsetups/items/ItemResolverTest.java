@@ -1,10 +1,5 @@
 package com.wikigearsetups.items;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -40,45 +35,9 @@ public class ItemResolverTest
 	private static final int VOLCANIC_ABYSSAL_WHIP = 12773;
 	private static final int FROZEN_ABYSSAL_WHIP = 12774;
 
-	private static class FakeIndex implements ItemNameIndex
-	{
-		private final Map<Integer, String> names;
-		private final Map<String, List<Integer>> byName = new HashMap<>();
-
-		FakeIndex(Map<Integer, String> names)
-		{
-			this.names = names;
-			names.forEach((id, name) ->
-				byName.computeIfAbsent(ItemNames.normalize(name), k -> new ArrayList<>()).add(id));
-		}
-
-		@Override
-		public List<Integer> idsByName(String normalizedName)
-		{
-			return byName.getOrDefault(normalizedName, Collections.emptyList());
-		}
-
-		@Override
-		public String nameById(int itemId)
-		{
-			return names.get(itemId);
-		}
-
-		@Override
-		public boolean isReady()
-		{
-			return true;
-		}
-	}
-
 	private static ItemResolver resolver(Object... idNamePairs)
 	{
-		Map<Integer, String> names = new HashMap<>();
-		for (int i = 0; i < idNamePairs.length; i += 2)
-		{
-			names.put((Integer) idNamePairs[i], (String) idNamePairs[i + 1]);
-		}
-		return new ItemResolver(new FakeIndex(names));
+		return new ItemResolver(FakeItemNameIndex.of(idNamePairs));
 	}
 
 	@Test

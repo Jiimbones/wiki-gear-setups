@@ -26,16 +26,21 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [ ] Unresolvable-name surfacing → preview panel (Phase 5)
 
 ## Phase 3 — Ownership
-- [ ] `BankStateCache`: snapshot bank `ItemContainer` on bank open, persist per profile
-- [ ] Include equipped + inventory containers (always readable)
-- [ ] `OwnershipResolver`: per slot, walk ranked alternatives, pick best owned (place the specific owned variant ID)
-- [ ] Handle: no snapshot yet (prompt user), stale snapshot, missing-gear behavior per config
+- [x] `BankStateCache`: snapshot on bank `ItemContainerChanged`, persisted via RS-profile-scoped config (Gson map); reloaded on `RuneScapeProfileChanged` (handles alts/leagues); skips qty-0 placeholder rows
+- [x] Live inventory + equipment merged in `ownedItemIds()` — client thread only (gameval `InventoryID.INV`/`WORN`/`BANK`; old enum is deprecated)
+- [x] `OwnershipResolver`: pure; walks rank-ascending alternatives, first satisfiable wins; places the specific owned variant id (exact match beats variant); goal-item path per `MissingGearBehavior`; unresolved names recorded per slot
+- [x] 10 tests (8 ownership + 2 snapshot serialization); 39 total green
+- [ ] "No snapshot yet — open your bank" prompt → panel (Phase 5); `hasSnapshot()` ready
 
 ## Phase 4 — Bank tag layout output
-- [ ] Verify current core BankTags API surface (`@PluginDependency`, `TagManager`, layout API) against runelite master — **do this before coding**
-- [ ] `LayoutBuilder`: deterministic grid (equipment rows in slot order; alternatives below)
-- [ ] Write tag + layout; re-import policy (overwrite same tag name)
-- [ ] Fallback path: generate `banktags,1,...` import string if API unsuitable
+- [x] API verified against runelite master: `TagManager` (addTag/removeTag, public @Singleton), `LayoutManager` (saveLayout/loadLayout/removeLayout), `TabManager` (add/find/save), `TagTab` (@Data, public no-args ctor + setters; 2-arg ctor package-private), `Layout(String tag)` + setItemAtPos. `BankTagsService` is read/open-only — writes go via managers.
+- [x] `@PluginDependency(BankTagsPlugin.class)` added; importer refuses to run if Bank Tags disabled (TabManager.save() on an unloaded list would wipe the user's real tabs)
+- [x] `TagNames`: deterministic page+style slug ("zulrah-magic-diary-kill"), ≤50 chars
+- [x] `LayoutBuilder`: pure; packs one item per slot in EquipSlot order, deterministic across input order
+- [x] `BankTagImporter`: clears old tag → tags picks (variation=false; we picked exact ids deliberately) → saves layout → creates/updates tab (icon = weapon pick, else first pick). Client thread only.
+- [x] 10 new tests (TagNames, LayoutBuilder, iconFor); 49 total green
+- [ ] Runtime verification in dev client — blocked on Phase 5 UI to trigger an import
+- [x] ~~Fallback import string~~ dropped: manager API sufficient
 
 ## Phase 5 — UI + ship
 - [ ] Side panel: search box → page pick → setup/style pick → preview (owned / substituted / missing) → import button

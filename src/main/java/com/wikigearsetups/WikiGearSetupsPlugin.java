@@ -2,6 +2,7 @@ package com.wikigearsetups;
 
 import com.google.inject.Binder;
 import com.google.inject.Provides;
+import com.wikigearsetups.bank.BankStateCache;
 import com.wikigearsetups.items.ClientItemNameIndex;
 import com.wikigearsetups.items.ItemNameIndex;
 import javax.inject.Inject;
@@ -9,10 +10,15 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.banktags.BankTagsPlugin;
 
 @Slf4j
 @PluginDescriptor(
@@ -20,6 +26,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 	description = "Import recommended gear setups from the OSRS Wiki as bank tag layouts, built from the gear you own",
 	tags = {"bank", "tag", "layout", "gear", "equipment", "wiki", "setup"}
 )
+@PluginDependency(BankTagsPlugin.class)
 public class WikiGearSetupsPlugin extends Plugin
 {
 	@Inject
@@ -30,6 +37,9 @@ public class WikiGearSetupsPlugin extends Plugin
 
 	@Inject
 	private ClientItemNameIndex itemNameIndex;
+
+	@Inject
+	private BankStateCache bankStateCache;
 
 	@Override
 	public void configure(Binder binder)
@@ -43,6 +53,7 @@ public class WikiGearSetupsPlugin extends Plugin
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			itemNameIndex.ensureBuilt();
+			bankStateCache.loadSnapshot();
 		}
 	}
 
@@ -57,6 +68,23 @@ public class WikiGearSetupsPlugin extends Plugin
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
 			itemNameIndex.ensureBuilt();
+		}
+	}
+
+	@Subscribe
+	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
+	{
+		// fires once the RS profile is known post-login, and on world hops
+		// across profile boundaries (e.g. leagues) — reload the right snapshot
+		bankStateCache.loadSnapshot();
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		if (event.getContainerId() == InventoryID.BANK)
+		{
+			bankStateCache.updateFromContainer(event.getItemContainer());
 		}
 	}
 
