@@ -30,7 +30,7 @@ public class InventoryResolverTest
 		{
 			slots.add("");
 		}
-		return new InventorySetup("Test", slots);
+		return new InventorySetup("Test", slots, Collections.emptyList());
 	}
 
 	@Test
@@ -79,5 +79,20 @@ public class InventoryResolverTest
 			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
 		assertEquals(Collections.singletonList("Cheap food"), r.getUnresolvedNames());
 		assertEquals(1, r.getPicks().size());
+	}
+
+	@Test
+	public void runesResolveIntoRunePicks()
+	{
+		int fireRune = 554;
+		InventoryResolver r = new InventoryResolver(new ItemResolver(
+			FakeItemNameIndex.of(SHARK, "Shark", fireRune, "Fire rune")));
+		InventorySetup s = new InventorySetup("Test",
+			Collections.nCopies(28, ""), Arrays.asList("Fire rune"));
+
+		InventoryResolution res = r.resolve(s, Collections.singleton(fireRune), MissingGearBehavior.OMIT);
+		assertEquals(1, res.getRunePicks().size());
+		assertEquals(fireRune, res.getRunePicks().get(0).getItemId());
+		assertEquals(0, res.getRunePicks().get(0).getSlot());
 	}
 }

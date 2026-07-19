@@ -67,12 +67,12 @@ public class BankTagImporter
 	/** Single-setup convenience. */
 	public void importSetup(String tag, SetupResolution resolution, LayoutStyle layoutStyle)
 	{
-		importSetups(tag, Collections.singletonList(resolution), null, layoutStyle);
+		importSetups(tag, Collections.singletonList(resolution), null, layoutStyle, null);
 	}
 
 	/** Imports the setups (and optional inventory) as bank tag {@code tag}. Client thread only. */
 	public void importSetups(String tag, List<SetupResolution> resolutions,
-		@Nullable InventoryResolution inventory, LayoutStyle layoutStyle)
+		@Nullable InventoryResolution inventory, LayoutStyle layoutStyle, @Nullable Integer iconItemId)
 	{
 		if (!isBankTagsEnabled())
 		{
@@ -92,7 +92,14 @@ public class BankTagImporter
 		List<InventoryPick> inventoryPicks = inventory == null
 			? Collections.emptyList()
 			: inventory.getPicks();
+		List<InventoryPick> runePicks = inventory == null
+			? Collections.emptyList()
+			: inventory.getRunePicks();
 		for (InventoryPick pick : inventoryPicks)
+		{
+			itemIds.add(pick.getItemId());
+		}
+		for (InventoryPick pick : runePicks)
 		{
 			itemIds.add(pick.getItemId());
 		}
@@ -109,10 +116,10 @@ public class BankTagImporter
 			tagManager.addTag(itemId, tag, false);
 		}
 
-		Layout layout = LayoutBuilder.build(tag, gearBlocks, inventoryPicks, layoutStyle);
+		Layout layout = LayoutBuilder.build(tag, gearBlocks, inventoryPicks, runePicks, layoutStyle);
 		layoutManager.saveLayout(layout);
 
-		int icon = iconFor(resolutions);
+		int icon = iconItemId != null ? iconItemId : iconFor(resolutions);
 		TagTab existing = tabManager.find(tag);
 		if (existing == null)
 		{
@@ -132,7 +139,7 @@ public class BankTagImporter
 	}
 
 	/** Tab icon: the first picked weapon across setups, else the first pick. */
-	static int iconFor(List<SetupResolution> resolutions)
+	public static int iconFor(List<SetupResolution> resolutions)
 	{
 		for (SetupResolution resolution : resolutions)
 		{

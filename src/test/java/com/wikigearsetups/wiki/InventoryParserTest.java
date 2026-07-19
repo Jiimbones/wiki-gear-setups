@@ -71,4 +71,33 @@ public class InventoryParserTest
 	{
 		assertTrue(parser.parse("{{Inventory|align=right}}").isEmpty());
 	}
+
+	@Test
+	public void gotrPositionalSlotsAndSameLinePaneLabelsParse() throws IOException
+	{
+		List<InventorySetup> setups = parser.parse(fixture("gotr-strategies"));
+		assertEquals(4, setups.size());
+		assertEquals("Entry-level", setups.get(0).getLabel());
+		assertEquals("Combination runes", setups.get(1).getLabel());
+
+		InventorySetup entry = setups.get(0);
+		assertEquals("Giant pouch", entry.getSlots().get(0));
+		assertEquals("Rune pouch", entry.getSlots().get(3));
+		assertEquals("Small pouch", entry.getSlots().get(4));
+		assertEquals("", entry.getSlots().get(6));
+	}
+
+	@Test
+	public void runePouchAttachesToPrecedingInventory() throws IOException
+	{
+		InventorySetup entry = parser.parse(fixture("gotr-strategies")).get(0);
+		assertEquals(java.util.Arrays.asList("Air rune", "Cosmic rune", "Astral rune"), entry.getRunes());
+	}
+
+	@Test
+	public void zulrahRunePouchAttaches() throws IOException
+	{
+		InventorySetup first = parser.parse(fixture("zulrah-strategies")).get(0);
+		assertEquals(java.util.Arrays.asList("Fire rune", "Blood rune", "Cosmic rune"), first.getRunes());
+	}
 }

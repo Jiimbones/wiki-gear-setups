@@ -32,12 +32,12 @@ public interface WikiGearSetupsConfig extends Config
 	@ConfigItem(
 		keyName = "missingGearBehavior",
 		name = "Missing gear",
-		description = "When you own no item for a slot: omit the slot, or show the wiki's best recommendation as a goal item",
+		description = "When you own no item for a slot: show the wiki's best recommendation as a goal placeholder, or omit the slot",
 		position = 0
 	)
 	default MissingGearBehavior missingGearBehavior()
 	{
-		return MissingGearBehavior.OMIT;
+		return MissingGearBehavior.SHOW_BEST_UNOWNED;
 	}
 
 	@ConfigItem(

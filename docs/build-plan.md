@@ -63,4 +63,12 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] `LayoutBuilder` multi-block: inventory maps to grid cols 4-7 rows 0-6 in wiki order; inventory item already placed as gear (a switch) skipped; COMPACT = blocks as rows with blank-row separators
 - [x] Inventory combo in panel ("No inventory" default) + inventory preview summary
 - [x] 15 new tests; 72 total green
-- [ ] User visual verification of inventory + all-styles import
+- [x] User visual verification of inventory + all-styles import (2026-07-19, screenshots)
+
+## Feedback round 2 (2026-07-19)
+- [x] GotR-style inventories fixed: {{Inventory}} accepts POSITIONAL params ("|Giant pouch |Large pouch |") counting empty cells, plus numbered; tabber pane labels may be same-line ("|-|Entry-level="). gotr-strategies fixture added (4 inventories)
+- [x] {{Rune pouch}} parsing: attaches to preceding inventory; runes placed directly under the last equipment block (row blocks*5, cols 0-3); resolved for ownership like inventory slots
+- [x] Default missing behavior → SHOW_BEST_UNOWNED (recommended items as placeholders, gear + inventory). NOTE: user's existing profile stored OMIT — flip "Missing gear" in config once
+- [x] Inventory auto-select: single inventory → selected; multiple → label⊃style match; manual pick sticks per page
+- [x] Editable tag name + tab icon item fields, prefilled with recommendation, user edits respected until page/style change; custom tag sanitized via TagNames.sanitize
+- [x] 6 new tests; 78 total green

@@ -61,11 +61,12 @@ public final class LayoutBuilder
 	/** Single-setup convenience. */
 	public static Layout build(String tag, List<SlotPick> picks, LayoutStyle style)
 	{
-		return build(tag, Collections.singletonList(picks), Collections.emptyList(), style);
+		return build(tag, Collections.singletonList(picks), Collections.emptyList(),
+			Collections.emptyList(), style);
 	}
 
 	public static Layout build(String tag, List<List<SlotPick>> gearBlocks,
-		List<InventoryPick> inventory, LayoutStyle style)
+		List<InventoryPick> inventory, List<InventoryPick> runes, LayoutStyle style)
 	{
 		Layout layout = new Layout(tag);
 		Set<Integer> placedGear = new HashSet<>();
@@ -84,6 +85,14 @@ public final class LayoutBuilder
 					}
 				}
 				blockRow += ROWS_PER_BLOCK;
+			}
+			// runes sit directly under the last equipment block, left side
+			for (InventoryPick rune : runes)
+			{
+				if (!placedGear.contains(rune.getItemId()))
+				{
+					layout.setItemAtPos(rune.getItemId(), blockRow * BANK_WIDTH + rune.getSlot());
+				}
 			}
 			for (InventoryPick pick : inventory)
 			{
@@ -119,6 +128,13 @@ public final class LayoutBuilder
 				if (!placedGear.contains(pick.getItemId()))
 				{
 					layout.setItemAtPos(pick.getItemId(), pos++);
+				}
+			}
+			for (InventoryPick rune : runes)
+			{
+				if (!placedGear.contains(rune.getItemId()))
+				{
+					layout.setItemAtPos(rune.getItemId(), pos++);
 				}
 			}
 		}

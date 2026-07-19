@@ -120,7 +120,7 @@ public class LayoutBuilderTest
 			pick(EquipSlot.FEET, 900));
 
 		Layout layout = LayoutBuilder.build("t", Arrays.asList(magic, ranged),
-			Collections.emptyList(), LayoutStyle.EQUIPMENT_SCREEN);
+			Collections.emptyList(), Collections.emptyList(), LayoutStyle.EQUIPMENT_SCREEN);
 
 		assertEquals(100, layout.getItemAtPos(1));       // block 0 head
 		assertEquals(900, layout.getItemAtPos(33));      // block 0 feet
@@ -139,7 +139,7 @@ public class LayoutBuilderTest
 
 		Layout layout = LayoutBuilder.build("t",
 			Collections.singletonList(Collections.singletonList(pick(EquipSlot.HEAD, 100))),
-			inventory, LayoutStyle.EQUIPMENT_SCREEN);
+			inventory, Collections.emptyList(), LayoutStyle.EQUIPMENT_SCREEN);
 
 		assertEquals(500, layout.getItemAtPos(4));
 		assertEquals(501, layout.getItemAtPos(7));
@@ -152,7 +152,7 @@ public class LayoutBuilderTest
 	{
 		Layout layout = LayoutBuilder.build("t",
 			Collections.singletonList(Collections.singletonList(pick(EquipSlot.WEAPON, 300))),
-			Collections.singletonList(new InventoryPick(0, 300, true)),
+			Collections.singletonList(new InventoryPick(0, 300, true)), Collections.emptyList(),
 			LayoutStyle.EQUIPMENT_SCREEN);
 
 		assertEquals(300, layout.getItemAtPos(16)); // weapon slot
@@ -167,10 +167,43 @@ public class LayoutBuilderTest
 			new InventoryPick(1, 500, true));
 
 		Layout layout = LayoutBuilder.build("t", Collections.emptyList(),
-			inventory, LayoutStyle.EQUIPMENT_SCREEN);
+			inventory, Collections.emptyList(), LayoutStyle.EQUIPMENT_SCREEN);
 
 		assertEquals(500, layout.getItemAtPos(4));
 		assertEquals(500, layout.getItemAtPos(5));
+	}
+
+	@Test
+	public void runesSitDirectlyUnderTheLastEquipmentBlock()
+	{
+		List<InventoryPick> runes = Arrays.asList(
+			new InventoryPick(0, 554, true),
+			new InventoryPick(1, 565, true),
+			new InventoryPick(2, 564, true));
+
+		Layout layout = LayoutBuilder.build("t",
+			Collections.singletonList(Collections.singletonList(pick(EquipSlot.HEAD, 100))),
+			Collections.emptyList(), runes, LayoutStyle.EQUIPMENT_SCREEN);
+
+		// single gear block occupies rows 0-4; runes on row 5, cols 0-2
+		assertEquals(554, layout.getItemAtPos(40));
+		assertEquals(565, layout.getItemAtPos(41));
+		assertEquals(564, layout.getItemAtPos(42));
+	}
+
+	@Test
+	public void runesFollowStackedBlocksInCombinedImports()
+	{
+		List<InventoryPick> runes = Collections.singletonList(new InventoryPick(0, 554, true));
+
+		Layout layout = LayoutBuilder.build("t",
+			Arrays.asList(
+				Collections.singletonList(pick(EquipSlot.HEAD, 100)),
+				Collections.singletonList(pick(EquipSlot.HEAD, 101))),
+			Collections.emptyList(), runes, LayoutStyle.EQUIPMENT_SCREEN);
+
+		// two blocks occupy rows 0-9; runes on row 10
+		assertEquals(554, layout.getItemAtPos(80));
 	}
 
 	private static SetupResolution resolution(SlotPick... picks)

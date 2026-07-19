@@ -82,6 +82,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
 	private final JPanel previewPanel = new JPanel();
+	private final JTextField tagNameField = new JTextField();
+	private final JTextField iconField = new JTextField();
 	private final JButton importButton = new JButton("Import as bank tag");
 
 	private List<SearchResult> searchResults = Collections.emptyList();
@@ -91,6 +93,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private List<SetupResolution> currentResolutions;
 	private InventoryResolution currentInventoryResolution;
 	private boolean updatingCombos;
+	private boolean userPickedInventory;
+	private String lastAutoTag = "";
+	private String lastAutoIcon = "";
 
 	@Inject
 	public WikiGearSetupsPanel(WikiClient wikiClient, OwnershipResolver ownershipResolver,
@@ -142,6 +147,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			if (!updatingCombos)
 			{
+				updatingCombos = true;
+				autoSelectInventory();
+				updatingCombos = false;
 				resolveSelection();
 			}
 		});
@@ -154,6 +162,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			if (!updatingCombos)
 			{
+				userPickedInventory = true;
 				resolveSelection();
 			}
 		});
@@ -167,9 +176,18 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		add(center, BorderLayout.CENTER);
 
+		JPanel south = new JPanel();
+		south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
+		south.add(labeledField("Tag name", tagNameField));
+		south.add(Box.createVerticalStrut(4));
+		south.add(labeledField("Tab icon item", iconField));
+		south.add(Box.createVerticalStrut(6));
 		importButton.setEnabled(false);
+		importButton.setAlignmentX(LEFT_ALIGNMENT);
+		importButton.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, importButton.getPreferredSize().height));
 		importButton.addActionListener(e -> doImport());
-		add(importButton, BorderLayout.SOUTH);
+		south.add(importButton);
+		add(south, BorderLayout.SOUTH);
 	}
 
 	private void doSearch()
@@ -249,6 +267,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		currentPageTitle = pageTitle;
 		currentSetups = setups;
 		currentInventories = inventories;
+		userPickedInventory = false;
 
 		updatingCombos = true;
 		DefaultComboBoxModel<String> setupModel = new DefaultComboBoxModel<>();
@@ -271,10 +290,44 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 		inventoryCombo.setModel(invModel);
 		inventoryCombo.setVisible(!inventories.isEmpty());
+		autoSelectInventory();
 		updatingCombos = false;
 
 		status(setups.size() + (setups.size() == 1 ? " setup on " : " setups on ") + displayTitle(pageTitle), null);
 		resolveSelection();
+	}
+
+	/**
+	 * A lone inventory is obviously the right one — select it. With several,
+	 * pick the one whose label matches the chosen style; otherwise leave the
+	 * manual choice alone.
+	 */
+	private void autoSelectInventory()
+	{
+		if (userPickedInventory || currentInventories.isEmpty())
+		{
+			return;
+		}
+		if (currentInventories.size() == 1)
+		{
+			inventoryCombo.setSelectedIndex(1);
+			return;
+		}
+		int setupIdx = setupCombo.getSelectedIndex();
+		if (currentSetups == null || setupIdx < 0 || setupIdx >= currentSetups.size())
+		{
+			return;
+		}
+		String style = currentSetups.get(setupIdx).getStyleLabel().toLowerCase(Locale.ROOT);
+		for (int i = 0; i < currentInventories.size(); i++)
+		{
+			String label = currentInventories.get(i).getLabel().toLowerCase(Locale.ROOT);
+			if (label.contains(style) || style.contains(label))
+			{
+				inventoryCombo.setSelectedIndex(i + 1);
+				return;
+			}
+		}
 	}
 
 	private void resolveSelection()
@@ -393,6 +446,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 				inv.append(", ").append(invResolution.getMissingCount()).append(" missing");
 			}
 			addRow(inv.toString(), placed > 0 ? OWNED : ColorScheme.MEDIUM_GRAY_COLOR, false);
+			if (!invResolution.getRunePicks().isEmpty())
+			{
+				List<String> runeNames = new ArrayList<>();
+				for (com.wikigearsetups.bank.InventoryPick rune : invResolution.getRunePicks())
+				{
+					String rn = itemNameIndex.nameById(rune.getItemId());
+					runeNames.add(rn != null ? rn : "?");
+				}
+				addRow("Runes: " + String.join(", ", runeNames), OWNED, false);
+			}
 			if (!invResolution.getUnresolvedNames().isEmpty())
 			{
 				addRow("Unrecognized: " + String.join(", ", invResolution.getUnresolvedNames()),
@@ -403,6 +466,27 @@ public class WikiGearSetupsPanel extends PluginPanel
 		boolean importable = totalPicks > 0
 			|| (invResolution != null && !invResolution.getPicks().isEmpty());
 		importButton.setEnabled(importable);
+
+		// prefill tag name and icon, respecting user edits
+		String autoTag = autoTagName(resolutions);
+		if (tagNameField.getText().trim().isEmpty() || tagNameField.getText().equals(lastAutoTag))
+		{
+			tagNameField.setText(autoTag);
+		}
+		lastAutoTag = autoTag;
+
+		String autoIcon = "";
+		int autoIconId = BankTagImporter.iconFor(resolutions);
+		String autoIconName = itemNameIndex.nameById(autoIconId);
+		if (autoIconName != null)
+		{
+			autoIcon = autoIconName;
+		}
+		if (iconField.getText().trim().isEmpty() || iconField.getText().equals(lastAutoIcon))
+		{
+			iconField.setText(autoIcon);
+		}
+		lastAutoIcon = autoIcon;
 
 		StringBuilder summary = new StringBuilder().append(totalPicks).append(" gear items");
 		if (substitutes > 0)
@@ -419,6 +503,18 @@ public class WikiGearSetupsPanel extends PluginPanel
 		previewPanel.repaint();
 	}
 
+	private String autoTagName(List<SetupResolution> resolutions)
+	{
+		if (currentPageTitle == null || resolutions == null || resolutions.isEmpty())
+		{
+			return "";
+		}
+		String styleLabel = resolutions.size() > 1
+			? "all"
+			: resolutions.get(0).getSetup().getStyleLabel();
+		return TagNames.build(currentPageTitle, styleLabel);
+	}
+
 	private void doImport()
 	{
 		List<SetupResolution> resolutions = currentResolutions;
@@ -428,16 +524,28 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			return;
 		}
-		String styleLabel = resolutions.size() > 1
-			? "all"
-			: resolutions.get(0).getSetup().getStyleLabel();
-		String tag = TagNames.build(pageTitle, styleLabel);
+		String customTag = TagNames.sanitize(tagNameField.getText());
+		String tag = customTag.isEmpty() ? autoTagName(resolutions) : customTag;
+
+		Integer iconId = null;
+		String iconName = iconField.getText().trim();
+		if (!iconName.isEmpty())
+		{
+			List<Integer> iconIds = itemNameIndex.idsByName(
+				com.wikigearsetups.items.ItemNames.normalize(iconName));
+			if (!iconIds.isEmpty())
+			{
+				iconId = iconIds.get(0);
+			}
+		}
+		Integer icon = iconId;
+
 		importButton.setEnabled(false);
 		clientThread.invokeLater(() ->
 		{
 			try
 			{
-				importer.importSetups(tag, resolutions, invResolution, config.layoutStyle());
+				importer.importSetups(tag, resolutions, invResolution, config.layoutStyle(), icon);
 				SwingUtilities.invokeLater(() ->
 				{
 					status("Imported '" + tag + "' — open your bank to see the tab", OWNED);
@@ -463,12 +571,29 @@ public class WikiGearSetupsPanel extends PluginPanel
 		currentInventories = Collections.emptyList();
 		currentResolutions = null;
 		currentInventoryResolution = null;
+		userPickedInventory = false;
 		setupCombo.setVisible(false);
 		inventoryCombo.setVisible(false);
+		tagNameField.setText("");
+		iconField.setText("");
+		lastAutoTag = "";
+		lastAutoIcon = "";
 		previewPanel.removeAll();
 		previewPanel.revalidate();
 		previewPanel.repaint();
 		importButton.setEnabled(false);
+	}
+
+	private static JPanel labeledField(String label, JTextField field)
+	{
+		JPanel row = new JPanel(new BorderLayout(6, 0));
+		JLabel l = new JLabel(label);
+		l.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		row.add(l, BorderLayout.WEST);
+		row.add(field, BorderLayout.CENTER);
+		row.setAlignmentX(LEFT_ALIGNMENT);
+		row.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, field.getPreferredSize().height + 4));
+		return row;
 	}
 
 	private void addRow(String text, Color color, boolean small)
