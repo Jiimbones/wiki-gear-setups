@@ -20,9 +20,10 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [ ] Transclusion following ({{/Subpage}}) — not needed by any fixture; defer until a real page requires it
 
 ## Phase 2 — Item resolution
-- [ ] `ItemResolver`: wiki item name → set of acceptable item IDs (`ItemManager` + `ItemVariationMapping`)
-- [ ] Variant traps covered by tests: charges, ornament kits, barrows decay, imbues, poisons
-- [ ] Unresolvable-name reporting (surface in preview, don't fail silently)
+- [x] `ClientItemNameIndex`: full item-definition scan (chunked 4000/frame on client thread, skips noted+placeholders), published as immutable maps; built on LOGGED_IN. NOT ItemManager.search (that only covers tradeables — misses void, imbues, barrows states)
+- [x] `ItemResolver`: name → primary id + acceptable id set via ItemVariationMapping, **name-filtered** because variation groups merge upgrade tiers (black mask group holds plain AND imbued). Rules: stripped-charge equality / startsWith (upgrades) / endsWith (recolors). Lower tier never satisfies higher-tier rec.
+- [x] 9 tests using real item ids against real item_variations.json: barrows decay, charged-imbued vs plain, recolors, LMS same-name dupes
+- [ ] Unresolvable-name surfacing → preview panel (Phase 5)
 
 ## Phase 3 — Ownership
 - [ ] `BankStateCache`: snapshot bank `ItemContainer` on bank open, persist per profile

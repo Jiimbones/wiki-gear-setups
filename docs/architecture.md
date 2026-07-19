@@ -8,7 +8,8 @@ Panel UI → `WikiClient` (fetch wikitext) → `GearSetupParser` (→ `GearSetup
 |---|---|---|
 | `WikiClient` | MediaWiki API calls, async, cached | RuneLite-injected `OkHttpClient`; `api.php?action=parse&prop=wikitext`; custom User-Agent required by wiki policy |
 | `GearSetupParser` | wikitext → `GearSetup` model | Hand-rolled bracket parser (hub whitelist forbids parser libs). See wiki-format.md |
-| `ItemResolver` | wiki name → `Set<Integer>` acceptable item IDs | `ItemManager.search()`, `ItemVariationMapping` for variant canonicalization |
+| `ClientItemNameIndex` | name↔id maps from full item-definition scan | Chunked across client frames; skips noted/placeholders; `ItemNameIndex` interface faked in tests |
+| `ItemResolver` | wiki name → `ResolvedItem` (primary id + acceptable id set) | `ItemVariationMapping` expansion, name-filtered: variation groups merge upgrade tiers, so plain never satisfies an "(i)" rec; upgrades/recolors/charges do |
 | `BankStateCache` | persisted per-profile bank snapshot | Bank only readable while open — snapshot on `ItemContainerChanged` (BANK); also read EQUIPMENT + INVENTORY (always available). Same approach as Bank Memory plugin |
 | `OwnershipResolver` | per slot, walk ranks, pick best owned variant | Missing-slot behavior driven by config enum |
 | `LayoutBuilder` | deterministic grid placement | Slot order top rows, alternatives below; stable across re-imports |
