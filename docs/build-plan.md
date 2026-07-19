@@ -55,5 +55,12 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] `LayoutStyle` config (default EQUIPMENT_SCREEN): mirrors worn-equipment interface in bank grid cols 0-3 (head@1; cape/neck/ammo@8-10; weapon/body/shield/special@16-19; legs@25; hands/feet/ring@32-34); cols 4-7 reserved for v1.1 inventory. COMPACT = old packed rows.
 - [ ] User to visually verify equipment-screen layout + slayer skip in dev client
 
-## v1.1 (out of scope for v1)
-- Suggested inventory (potions/runes/food) parsing → layout inventory section (place in grid cols 4-7, like the user's reference screenshot)
+## v1.1 (2026-07-19)
+- [x] Search filter: `hastemplate:"Recommended equipment"` CirrusSearch keyword — status/lore pages (e.g. "Venom") never appear; results display with "/Strategies" trimmed
+- [x] `InventoryParser`: `{{Inventory}}` templates (28 numbered slots, plain names); labels from nearest tabber pane/heading backscan; placeholder templates ({{Cheap food}}) surface as their name → land in "unrecognized". {{Rune pouch}} and {{Equipment}} example-loadout templates deliberately ignored
+- [x] `InventoryResolver`: per-slot owned/missing/unrecognized (no ranks); dupes within inventory kept (wiki repeats food slots deliberately)
+- [x] Multi-style content (ToA/CoX/ToB): "All styles (one tab)" combo option — one tab, one 5-row equipment block per style stacked vertically, gear shared across styles deduped, tag "<page>-all"
+- [x] `LayoutBuilder` multi-block: inventory maps to grid cols 4-7 rows 0-6 in wiki order; inventory item already placed as gear (a switch) skipped; COMPACT = blocks as rows with blank-row separators
+- [x] Inventory combo in panel ("No inventory" default) + inventory preview summary
+- [x] 15 new tests; 72 total green
+- [ ] User visual verification of inventory + all-styles import

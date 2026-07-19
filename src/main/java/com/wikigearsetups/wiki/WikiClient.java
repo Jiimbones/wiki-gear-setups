@@ -73,12 +73,17 @@ public class WikiClient
 		});
 	}
 
+	/**
+	 * Searches only pages that actually contain a gear table, via the
+	 * CirrusSearch hastemplate keyword — status-effect and lore pages (e.g.
+	 * "Venom" for a zulrah search) never show up.
+	 */
 	public CompletableFuture<List<SearchResult>> search(String query)
 	{
 		HttpUrl url = API.newBuilder()
 			.addQueryParameter("action", "query")
 			.addQueryParameter("list", "search")
-			.addQueryParameter("srsearch", query)
+			.addQueryParameter("srsearch", query + " hastemplate:\"Recommended equipment\"")
 			.addQueryParameter("srlimit", "10")
 			.addQueryParameter("format", "json")
 			.addQueryParameter("formatversion", "2")

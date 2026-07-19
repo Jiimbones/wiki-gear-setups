@@ -1,0 +1,83 @@
+package com.wikigearsetups.bank;
+
+import com.wikigearsetups.WikiGearSetupsConfig.MissingGearBehavior;
+import com.wikigearsetups.items.FakeItemNameIndex;
+import com.wikigearsetups.items.ItemResolver;
+import com.wikigearsetups.wiki.InventorySetup;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+public class InventoryResolverTest
+{
+	private static final int SHARK = 385;
+	private static final int KARAMBWAN = 3144;
+
+	private final InventoryResolver resolver = new InventoryResolver(new ItemResolver(
+		FakeItemNameIndex.of(SHARK, "Shark", KARAMBWAN, "Cooked karambwan")));
+
+	private static InventorySetup setup(String... names)
+	{
+		List<String> slots = new ArrayList<>(Arrays.asList(names));
+		while (slots.size() < 28)
+		{
+			slots.add("");
+		}
+		return new InventorySetup("Test", slots);
+	}
+
+	@Test
+	public void ownedItemsArePlacedAtTheirWikiSlots()
+	{
+		InventoryResolution r = resolver.resolve(setup("Shark", "", "Cooked karambwan"),
+			new HashSet<>(Arrays.asList(SHARK, KARAMBWAN)), MissingGearBehavior.OMIT);
+
+		assertEquals(2, r.getPicks().size());
+		assertEquals(0, r.getPicks().get(0).getSlot());
+		assertEquals(SHARK, r.getPicks().get(0).getItemId());
+		assertEquals(2, r.getPicks().get(1).getSlot());
+		assertEquals(KARAMBWAN, r.getPicks().get(1).getItemId());
+	}
+
+	@Test
+	public void duplicateSlotsAreAllKept()
+	{
+		InventoryResolution r = resolver.resolve(setup("Shark", "Shark", "Shark"),
+			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
+		assertEquals(3, r.getPicks().size());
+	}
+
+	@Test
+	public void missingItemsOmittedByDefaultButCounted()
+	{
+		InventoryResolution r = resolver.resolve(setup("Shark"),
+			Collections.emptySet(), MissingGearBehavior.OMIT);
+		assertTrue(r.getPicks().isEmpty());
+		assertEquals(1, r.getMissingCount());
+	}
+
+	@Test
+	public void missingItemsPlacedUnderGoalConfig()
+	{
+		InventoryResolution r = resolver.resolve(setup("Shark"),
+			Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED);
+		assertEquals(1, r.getPicks().size());
+		assertFalse(r.getPicks().get(0).isOwned());
+	}
+
+	@Test
+	public void placeholdersLandInUnresolvedOnce()
+	{
+		InventoryResolution r = resolver.resolve(setup("Cheap food", "Shark", "Cheap food"),
+			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
+		assertEquals(Collections.singletonList("Cheap food"), r.getUnresolvedNames());
+		assertEquals(1, r.getPicks().size());
+	}
+}

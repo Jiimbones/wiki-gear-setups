@@ -1,5 +1,6 @@
 package com.wikigearsetups.layout;
 
+import com.wikigearsetups.bank.InventoryPick;
 import com.wikigearsetups.bank.SetupResolution;
 import com.wikigearsetups.bank.SlotPick;
 import com.wikigearsetups.wiki.EquipSlot;
@@ -98,14 +99,78 @@ public class LayoutBuilderTest
 		SetupResolution r = resolution(
 			pick(EquipSlot.HEAD, 100),
 			pick(EquipSlot.WEAPON, 300));
-		assertEquals(300, BankTagImporter.iconFor(r));
+		assertEquals(300, BankTagImporter.iconFor(Collections.singletonList(r)));
 	}
 
 	@Test
 	public void firstPickIsIconWhenNoWeapon()
 	{
 		SetupResolution r = resolution(pick(EquipSlot.HEAD, 100));
-		assertEquals(100, BankTagImporter.iconFor(r));
+		assertEquals(100, BankTagImporter.iconFor(Collections.singletonList(r)));
+	}
+
+	@Test
+	public void combinedStylesStackAsBlocksAndDedupeSharedGear()
+	{
+		List<SlotPick> magic = Arrays.asList(
+			pick(EquipSlot.HEAD, 100),
+			pick(EquipSlot.FEET, 900));  // same boots both styles
+		List<SlotPick> ranged = Arrays.asList(
+			pick(EquipSlot.HEAD, 101),
+			pick(EquipSlot.FEET, 900));
+
+		Layout layout = LayoutBuilder.build("t", Arrays.asList(magic, ranged),
+			Collections.emptyList(), LayoutStyle.EQUIPMENT_SCREEN);
+
+		assertEquals(100, layout.getItemAtPos(1));       // block 0 head
+		assertEquals(900, layout.getItemAtPos(33));      // block 0 feet
+		assertEquals(101, layout.getItemAtPos(41));      // block 1 head (rows offset by 5)
+		assertEquals(-1, layout.getItemAtPos(73));       // block 1 feet: deduped, empty
+	}
+
+	@Test
+	public void inventoryFillsRightHalfInWikiOrder()
+	{
+		List<InventoryPick> inventory = Arrays.asList(
+			new InventoryPick(0, 500, true),   // row 0 col 4
+			new InventoryPick(3, 501, true),   // row 0 col 7
+			new InventoryPick(4, 502, true),   // row 1 col 4
+			new InventoryPick(27, 503, true)); // row 6 col 7
+
+		Layout layout = LayoutBuilder.build("t",
+			Collections.singletonList(Collections.singletonList(pick(EquipSlot.HEAD, 100))),
+			inventory, LayoutStyle.EQUIPMENT_SCREEN);
+
+		assertEquals(500, layout.getItemAtPos(4));
+		assertEquals(501, layout.getItemAtPos(7));
+		assertEquals(502, layout.getItemAtPos(12));
+		assertEquals(503, layout.getItemAtPos(55));
+	}
+
+	@Test
+	public void inventoryItemAlreadyPlacedAsGearIsSkipped()
+	{
+		Layout layout = LayoutBuilder.build("t",
+			Collections.singletonList(Collections.singletonList(pick(EquipSlot.WEAPON, 300))),
+			Collections.singletonList(new InventoryPick(0, 300, true)),
+			LayoutStyle.EQUIPMENT_SCREEN);
+
+		assertEquals(300, layout.getItemAtPos(16)); // weapon slot
+		assertEquals(-1, layout.getItemAtPos(4));   // inventory spot stays empty
+	}
+
+	@Test
+	public void inventoryDuplicatesWithinInventoryAreKept()
+	{
+		List<InventoryPick> inventory = Arrays.asList(
+			new InventoryPick(0, 500, true),
+			new InventoryPick(1, 500, true));
+
+		Layout layout = LayoutBuilder.build("t", Collections.emptyList(),
+			inventory, LayoutStyle.EQUIPMENT_SCREEN);
+
+		assertEquals(500, layout.getItemAtPos(4));
+		assertEquals(500, layout.getItemAtPos(5));
 	}
 
 	private static SetupResolution resolution(SlotPick... picks)
