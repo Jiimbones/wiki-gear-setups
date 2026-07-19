@@ -6,16 +6,18 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Gradle project from runelite example-plugin template (build.gradle, settings.gradle)
 - [x] Plugin skeleton: `WikiGearSetupsPlugin`, `WikiGearSetupsConfig`, test runner
 - [x] runelite-plugin.properties, LICENSE (BSD-2), README, .gitignore, git init
-- [ ] **Manual (user):** install JDK 11+ (e.g. Temurin) — nothing builds until then
-- [ ] Gradle wrapper (run `gradle wrapper --gradle-version 8.5` once gradle available, or copy wrapper from runelite/example-plugin)
-- [ ] Verify `gradlew build` and `gradlew run` (dev-mode client) succeed
+- [x] JDK: Temurin 17.0.19 installed via winget (`C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot`; set JAVA_HOME when building)
+- [x] Gradle wrapper 8.10 copied from runelite/example-plugin; gradlew exec bit set
+- [x] `gradlew build` verified green
+- [ ] `gradlew run` (dev-mode client) — deferred until there's UI to look at
 
 ## Phase 1 — Wiki fetch + parser
-- [ ] `WikiClient`: MediaWiki API via OkHttp, custom User-Agent, response caching
-- [ ] Page discovery: search API + `/Strategies` subpage probing
-- [ ] `GearSetupParser`: recursive bracket-matching parse of `{{Recommended equipment}}` → `GearSetup` model (see wiki-format.md)
-- [ ] Unit tests against saved wikitext fixtures: Zulrah, Vorkath, CoX, a slayer monster, a quest page (varied on purpose)
-- [ ] Per-slot failure tolerance (bad slot ≠ dead page)
+- [x] `WikiClient`: async (CompletableFuture over OkHttp enqueue), custom User-Agent, 15-min page cache; JSON extraction split into testable statics
+- [~] Page discovery: search API done; `/Strategies` subpage probing heuristic still todo (wire into panel flow, Phase 5)
+- [x] `GearSetupParser`: bracket-matching parse → `GearSetup`; uses template's own `|style=` param as label
+- [x] 20 unit tests green: 5 frozen fixtures (see wiki-format.md fixture inventory) + synthetic edge cases (efn variants, pic=, N/A, unclosed template, nesting)
+- [x] Per-slot failure tolerance (try/catch per param, log + skip)
+- [ ] Transclusion following ({{/Subpage}}) — not needed by any fixture; defer until a real page requires it
 
 ## Phase 2 — Item resolution
 - [ ] `ItemResolver`: wiki item name → set of acceptable item IDs (`ItemManager` + `ItemVariationMapping`)
