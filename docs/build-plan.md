@@ -43,9 +43,12 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] ~~Fallback import string~~ dropped: manager API sufficient
 
 ## Phase 5 — UI + ship
-- [ ] Side panel: search box → page pick → setup/style pick → preview (owned / substituted / missing) → import button
-- [ ] Config UI polish; icon.png for hub listing
-- [ ] README screenshots + hub submission (fork runelite/plugin-hub, add manifest)
+- [x] `PageDiscovery`: candidate order [explicit subpage] → base/Strategies → base; tried until one parses non-empty
+- [x] `WikiGearSetupsPanel`: search → results → setup combo → preview (green owned / yellow alt / red goal / gray empty+unrecognized, summary counts, "open your bank" hint) → import. Threading: OkHttp async → parse off-EDT → ownership on client thread → UI on EDT
+- [x] NavigationButton + generated 16x16 tag icon (`resources/com/wikigearsetups/icon.png`)
+- [x] Removed unused maxAlternativesPerSlot config (hub-review noise)
+- [~] Runtime verification: dev client smoke (plugin loads, panel works at login screen); full import flow needs a logged-in account — user step
+- [ ] README screenshots + hub submission (fork runelite/plugin-hub, add manifest; icon.png for listing)
 
 ## v1.1 (out of scope for v1)
 - Suggested inventory (potions/runes/food) parsing → layout inventory section

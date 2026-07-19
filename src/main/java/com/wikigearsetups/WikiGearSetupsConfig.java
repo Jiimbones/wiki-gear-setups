@@ -38,15 +38,4 @@ public interface WikiGearSetupsConfig extends Config
 	{
 		return MissingGearBehavior.OMIT;
 	}
-
-	@ConfigItem(
-		keyName = "maxAlternativesPerSlot",
-		name = "Alternatives per slot",
-		description = "How many ranked alternatives per equipment slot to consider when building the layout",
-		position = 1
-	)
-	default int maxAlternativesPerSlot()
-	{
-		return 4;
-	}
 }

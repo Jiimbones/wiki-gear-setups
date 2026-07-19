@@ -5,6 +5,8 @@ import com.google.inject.Provides;
 import com.wikigearsetups.bank.BankStateCache;
 import com.wikigearsetups.items.ClientItemNameIndex;
 import com.wikigearsetups.items.ItemNameIndex;
+import com.wikigearsetups.ui.WikiGearSetupsPanel;
+import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -19,6 +21,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.banktags.BankTagsPlugin;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
 
 @Slf4j
 @PluginDescriptor(
@@ -41,6 +46,14 @@ public class WikiGearSetupsPlugin extends Plugin
 	@Inject
 	private BankStateCache bankStateCache;
 
+	@Inject
+	private ClientToolbar clientToolbar;
+
+	@Inject
+	private WikiGearSetupsPanel panel;
+
+	private NavigationButton navButton;
+
 	@Override
 	public void configure(Binder binder)
 	{
@@ -50,6 +63,15 @@ public class WikiGearSetupsPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		BufferedImage icon = ImageUtil.loadImageResource(WikiGearSetupsPlugin.class, "icon.png");
+		navButton = NavigationButton.builder()
+			.tooltip("Wiki Gear Setups")
+			.icon(icon)
+			.priority(7)
+			.panel(panel)
+			.build();
+		clientToolbar.addNavigation(navButton);
+
 		if (client.getGameState() == GameState.LOGGED_IN)
 		{
 			itemNameIndex.ensureBuilt();
@@ -60,6 +82,7 @@ public class WikiGearSetupsPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		clientToolbar.removeNavigation(navButton);
 	}
 
 	@Subscribe
