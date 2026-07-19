@@ -9,7 +9,6 @@ import com.wikigearsetups.bank.OwnershipResolver;
 import com.wikigearsetups.bank.SetupResolution;
 import com.wikigearsetups.bank.SlotPick;
 import com.wikigearsetups.items.ItemNameIndex;
-import com.wikigearsetups.items.ItemNames;
 import com.wikigearsetups.layout.BankTagImporter;
 import com.wikigearsetups.layout.LayoutBuilder;
 import com.wikigearsetups.layout.TagNames;
@@ -23,10 +22,12 @@ import com.wikigearsetups.wiki.SearchResult;
 import com.wikigearsetups.wiki.WikiClient;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -60,10 +62,13 @@ import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.ItemStats;
 import net.runelite.client.plugins.banktags.tabs.Layout;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.util.AsyncBufferedImage;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
 
 /**
@@ -84,6 +89,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final int GRID_COLS = 8;
 	private static final int CELL_W = 26;
 	private static final int CELL_H = 24;
+	private static final String DEVELOPER_NAME = "Jiimbones";
+	// placeholder until a real donation link exists
+	private static final String DONATION_URL = "https://example.com/donate";
 
 	private final WikiClient wikiClient;
 	private final GearSetupParser parser = new GearSetupParser();
@@ -107,7 +115,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
 	private final JTextField tagNameField = new JTextField();
-	private final JComboBox<String> iconCombo = new JComboBox<>();
+	private final JComboBox<IconOption> iconCombo = new JComboBox<>();
 	private final JButton importButton = new JButton("Import as bank tag");
 
 	private List<SearchResult> searchResults = Collections.emptyList();
@@ -116,6 +124,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private List<InventorySetup> currentInventories = Collections.emptyList();
 	private List<SetupResolution> currentResolutions;
 	private InventoryResolution currentInventoryResolution;
+	private List<Integer> currentExtras = Collections.emptyList();
 	private boolean updatingCombos;
 	private boolean userPickedInventory;
 	private boolean userEditedTag;
@@ -140,13 +149,28 @@ public class WikiGearSetupsPanel extends PluginPanel
 		setLayout(new BorderLayout(0, 6));
 		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-		JPanel north = new JPanel(new BorderLayout(0, 4));
+		JPanel north = new JPanel();
+		north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
+		JLabel banner = loadBanner();
+		if (banner != null)
+		{
+			banner.setAlignmentX(LEFT_ALIGNMENT);
+			north.add(banner);
+			north.add(Box.createVerticalStrut(8));
+		}
+		JPanel searchRow = new JPanel(new BorderLayout(4, 0));
+		searchRow.setAlignmentX(LEFT_ALIGNMENT);
 		JButton searchButton = new JButton("Search");
+		searchButton.setFocusPainted(false);
 		searchField.addActionListener(e -> doSearch());
 		searchButton.addActionListener(e -> doSearch());
-		north.add(searchField, BorderLayout.CENTER);
-		north.add(searchButton, BorderLayout.EAST);
-		north.add(statusLabel, BorderLayout.SOUTH);
+		searchRow.add(searchField, BorderLayout.CENTER);
+		searchRow.add(searchButton, BorderLayout.EAST);
+		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, searchField.getPreferredSize().height + 6));
+		north.add(searchRow);
+		statusLabel.setAlignmentX(LEFT_ALIGNMENT);
+		statusLabel.setFont(FontManager.getRunescapeSmallFont());
+		north.add(statusLabel);
 		add(north, BorderLayout.NORTH);
 
 		JPanel center = new JPanel();
@@ -154,6 +178,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		resultsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		resultsList.setVisibleRowCount(6);
+		resultsList.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		resultsList.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
 		resultsList.addListSelectionListener(e ->
 		{
 			int idx = resultsList.getSelectedIndex();
@@ -206,6 +232,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		gridPanel.setAlignmentX(LEFT_ALIGNMENT);
 		gridPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		gridPanel.setBorder(BorderFactory.createLineBorder(ColorScheme.DARKER_GRAY_HOVER_COLOR));
 		center.add(gridPanel);
 		center.add(Box.createVerticalStrut(6));
 
@@ -220,7 +247,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		tagNameField.getDocument().addDocumentListener(userEditListener(() -> tagNameField.hasFocus(), () -> userEditedTag = true));
 		south.add(labeledRow("Tag name", tagNameField));
 		south.add(Box.createVerticalStrut(4));
-		iconCombo.setEditable(true);
+		iconCombo.setRenderer(new IconOptionRenderer());
+		iconCombo.setMaximumRowCount(12);
 		iconCombo.addActionListener(e ->
 		{
 			if (!updatingCombos)
@@ -232,10 +260,99 @@ public class WikiGearSetupsPanel extends PluginPanel
 		south.add(Box.createVerticalStrut(6));
 		importButton.setEnabled(false);
 		importButton.setAlignmentX(LEFT_ALIGNMENT);
+		importButton.setFont(importButton.getFont().deriveFont(Font.BOLD));
+		importButton.setFocusPainted(false);
 		importButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, importButton.getPreferredSize().height));
 		importButton.addActionListener(e -> doImport());
 		south.add(importButton);
+		south.add(Box.createVerticalStrut(8));
+		south.add(footer());
 		add(south, BorderLayout.SOUTH);
+	}
+
+	/** Plugin logo shipped as resources/com/wikigearsetups/banner.png, or null when absent. */
+	private JLabel loadBanner()
+	{
+		try
+		{
+			BufferedImage img = ImageUtil.loadImageResource(WikiGearSetupsPanel.class, "/com/wikigearsetups/banner.png");
+			int width = PluginPanel.PANEL_WIDTH - 16;
+			int height = Math.max(1, img.getHeight() * width / img.getWidth());
+			return new JLabel(new ImageIcon(img.getScaledInstance(width, height, Image.SCALE_SMOOTH)));
+		}
+		catch (RuntimeException e)
+		{
+			log.debug("No banner resource", e);
+			return null;
+		}
+	}
+
+	private JPanel footer()
+	{
+		JPanel footer = new JPanel(new BorderLayout(4, 0));
+		footer.setAlignmentX(LEFT_ALIGNMENT);
+		JLabel dev = new JLabel("Developed by " + DEVELOPER_NAME);
+		dev.setFont(FontManager.getRunescapeSmallFont());
+		dev.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
+		footer.add(dev, BorderLayout.WEST);
+		JButton donate = new JButton("Donate ♥");
+		donate.setFont(FontManager.getRunescapeSmallFont());
+		donate.setFocusPainted(false);
+		donate.setMargin(new java.awt.Insets(1, 6, 1, 6));
+		donate.addActionListener(e -> LinkBrowser.browse(DONATION_URL));
+		footer.add(donate, BorderLayout.EAST);
+		footer.setMaximumSize(new Dimension(Integer.MAX_VALUE, donate.getPreferredSize().height + 2));
+		return footer;
+	}
+
+	/** A pickable tab icon: item id + display name, rendered with its sprite. */
+	private static final class IconOption
+	{
+		private final int itemId;
+		private final String name;
+
+		IconOption(int itemId, String name)
+		{
+			this.itemId = itemId;
+			this.name = name;
+		}
+
+		@Override
+		public String toString()
+		{
+			return name;
+		}
+
+		@Override
+		public boolean equals(Object o)
+		{
+			return o instanceof IconOption && ((IconOption) o).itemId == itemId;
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return itemId;
+		}
+	}
+
+	private final class IconOptionRenderer extends DefaultListCellRenderer
+	{
+		@Override
+		public Component getListCellRendererComponent(JList<?> list, Object value,
+			int index, boolean isSelected, boolean cellHasFocus)
+		{
+			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+			if (value instanceof IconOption)
+			{
+				IconOption option = (IconOption) value;
+				label.setText(option.name);
+				AsyncBufferedImage img = itemManager.getImage(option.itemId);
+				label.setIcon(new ImageIcon(img.getScaledInstance(20, 18, Image.SCALE_SMOOTH)));
+				label.setIconTextGap(6);
+			}
+			return label;
+		}
 	}
 
 	private void doSearch()
@@ -386,11 +503,21 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			return;
 		}
-		String style = currentSetups.get(setupIdx).getStyleLabel().toLowerCase(Locale.ROOT);
+		String style = currentSetups.get(setupIdx).getStyleLabel();
+		// combat-style tokens first: "Mage" gear finds a "Magic switches" inventory
+		for (int i = 0; i < currentInventories.size(); i++)
+		{
+			if (StyleTokens.stylesOverlap(style, currentInventories.get(i).getLabel()))
+			{
+				inventoryCombo.setSelectedIndex(i + 1);
+				return;
+			}
+		}
+		String styleLower = style.toLowerCase(Locale.ROOT);
 		for (int i = 0; i < currentInventories.size(); i++)
 		{
 			String label = currentInventories.get(i).getLabel().toLowerCase(Locale.ROOT);
-			if (label.contains(style) || style.contains(label))
+			if (label.contains(styleLower) || styleLower.contains(label))
 			{
 				inventoryCombo.setSelectedIndex(i + 1);
 				return;
@@ -436,6 +563,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 			{
 				SetupResolution r = ownershipResolver.resolve(setup, owned,
 					config.missingGearBehavior(), config.assumeSlayerTask());
+				List<SlotPick> picks = OwnershipResolver.dropShieldForTwoHanded(r.getPicks(), this::isTwoHanded);
+				if (picks != r.getPicks())
+				{
+					r = new SetupResolution(r.getSetup(), picks, r.getUnresolvedNames(), r.getEmptySlots());
+				}
 				resolutions.add(r);
 				gearBlocks.add(r.getPicks());
 			}
@@ -447,12 +579,47 @@ public class WikiGearSetupsPanel extends PluginPanel
 				? Collections.emptyList() : invResolution.getPicks();
 			List<InventoryPick> runePicks = invResolution == null
 				? Collections.emptyList() : invResolution.getRunePicks();
-			Layout previewLayout = LayoutBuilder.build("preview", gearBlocks, invPicks, runePicks, config.layoutStyle());
+
+			// owned alternates from the wiki tables fill the space below the layout
+			Set<Integer> excluded = new HashSet<>();
+			for (List<SlotPick> block : gearBlocks)
+			{
+				for (SlotPick pick : block)
+				{
+					excluded.add(pick.getItemId());
+				}
+			}
+			for (InventoryPick pick : invPicks)
+			{
+				excluded.add(pick.getItemId());
+			}
+			for (InventoryPick pick : runePicks)
+			{
+				excluded.add(pick.getItemId());
+			}
+			List<Integer> extras = new ArrayList<>();
+			for (GearSetup setup : selectedSetups)
+			{
+				for (int id : ownershipResolver.ownedAlternatives(setup, owned, config.assumeSlayerTask(), excluded))
+				{
+					extras.add(id);
+					excluded.add(id);
+				}
+			}
+
+			Layout previewLayout = LayoutBuilder.build("preview", gearBlocks, invPicks, runePicks, extras, config.layoutStyle());
 			Set<Integer> unownedIds = collectUnowned(resolutions, invPicks, runePicks);
 
 			SwingUtilities.invokeLater(() ->
-				showPreview(resolutions, invResolution, hasSnapshot, previewLayout.getLayout(), unownedIds));
+				showPreview(resolutions, invResolution, extras, hasSnapshot, previewLayout.getLayout(), unownedIds));
 		});
+	}
+
+	/** Client thread. Unknown stats count as one-handed — never drop a shield on a guess. */
+	private boolean isTwoHanded(int itemId)
+	{
+		ItemStats stats = itemManager.getItemStats(itemId);
+		return stats != null && stats.getEquipment() != null && stats.getEquipment().isTwoHanded();
 	}
 
 	private static Set<Integer> collectUnowned(List<SetupResolution> resolutions,
@@ -487,10 +654,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 	}
 
 	private void showPreview(List<SetupResolution> resolutions, InventoryResolution invResolution,
-		boolean hasSnapshot, int[] layoutArr, Set<Integer> unownedIds)
+		List<Integer> extras, boolean hasSnapshot, int[] layoutArr, Set<Integer> unownedIds)
 	{
 		currentResolutions = resolutions;
 		currentInventoryResolution = invResolution;
+		currentExtras = extras;
 		previewPanel.removeAll();
 
 		renderGrid(layoutArr, unownedIds);
@@ -536,7 +704,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 					suffix = "  (alt)";
 					substitutes++;
 				}
-				addRow(slotName(pick.getSlot()) + ": " + name + suffix, color, false);
+				addItemRow(pick.getItemId(), slotName(pick.getSlot()) + ": " + name + suffix, color);
 			}
 			for (EquipSlot slot : resolution.getEmptySlots())
 			{
@@ -574,6 +742,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 				addRow("Unrecognized: " + String.join(", ", invResolution.getUnresolvedNames()),
 					ColorScheme.MEDIUM_GRAY_COLOR, true);
 			}
+		}
+
+		if (!extras.isEmpty())
+		{
+			addRow("+" + extras.size() + " owned alternates below the layout", ColorScheme.LIGHT_GRAY_COLOR, true);
 		}
 
 		boolean importable = totalPicks > 0
@@ -653,7 +826,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		gridPanel.repaint();
 	}
 
-	/** Prefills tag name and icon combo, respecting in-progress user edits. */
+	/** Prefills tag name and icon picker, respecting in-progress user edits. */
 	private void refreshTagAndIcon(List<SetupResolution> resolutions)
 	{
 		String autoTag = autoTagName(resolutions);
@@ -662,11 +835,12 @@ public class WikiGearSetupsPanel extends PluginPanel
 			tagNameField.setText(autoTag);
 		}
 
-		LinkedHashSet<String> pickNames = new LinkedHashSet<>();
-		String autoIconName = itemNameIndex.nameById(BankTagImporter.iconFor(resolutions));
+		LinkedHashSet<IconOption> options = new LinkedHashSet<>();
+		int autoIconId = BankTagImporter.iconFor(resolutions);
+		String autoIconName = itemNameIndex.nameById(autoIconId);
 		if (autoIconName != null)
 		{
-			pickNames.add(autoIconName);
+			options.add(new IconOption(autoIconId, autoIconName));
 		}
 		for (SetupResolution r : resolutions)
 		{
@@ -675,20 +849,34 @@ public class WikiGearSetupsPanel extends PluginPanel
 				String n = itemNameIndex.nameById(pick.getItemId());
 				if (n != null)
 				{
-					pickNames.add(n);
+					options.add(new IconOption(pick.getItemId(), n));
+				}
+			}
+		}
+		if (currentInventoryResolution != null)
+		{
+			for (InventoryPick pick : currentInventoryResolution.getPicks())
+			{
+				String n = itemNameIndex.nameById(pick.getItemId());
+				if (n != null)
+				{
+					options.add(new IconOption(pick.getItemId(), n));
 				}
 			}
 		}
 
-		String previous = selectedIconName();
+		IconOption previous = (IconOption) iconCombo.getSelectedItem();
 		updatingCombos = true;
-		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
-		for (String n : pickNames)
+		DefaultComboBoxModel<IconOption> model = new DefaultComboBoxModel<>();
+		for (IconOption option : options)
 		{
-			model.addElement(n);
+			model.addElement(option);
+			// repaint when the sprite finishes loading so the picker isn't blank
+			itemManager.getImage(option.itemId).onLoaded(() ->
+				SwingUtilities.invokeLater(iconCombo::repaint));
 		}
 		iconCombo.setModel(model);
-		if (userEditedIcon && previous != null && !previous.isEmpty())
+		if (userEditedIcon && previous != null && options.contains(previous))
 		{
 			iconCombo.setSelectedItem(previous);
 		}
@@ -698,12 +886,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 			userEditedIcon = false;
 		}
 		updatingCombos = false;
-	}
-
-	private String selectedIconName()
-	{
-		Object item = iconCombo.getEditor() != null ? iconCombo.getEditor().getItem() : iconCombo.getSelectedItem();
-		return item != null ? item.toString().trim() : "";
 	}
 
 	private String autoTagName(List<SetupResolution> resolutions)
@@ -722,6 +904,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	{
 		List<SetupResolution> resolutions = currentResolutions;
 		InventoryResolution invResolution = currentInventoryResolution;
+		List<Integer> extras = currentExtras;
 		String pageTitle = currentPageTitle;
 		if (resolutions == null || resolutions.isEmpty() || pageTitle == null)
 		{
@@ -730,24 +913,15 @@ public class WikiGearSetupsPanel extends PluginPanel
 		String customTag = TagNames.sanitize(tagNameField.getText());
 		String tag = customTag.isEmpty() ? autoTagName(resolutions) : customTag;
 
-		Integer iconId = null;
-		String iconName = selectedIconName();
-		if (!iconName.isEmpty())
-		{
-			List<Integer> iconIds = itemNameIndex.idsByName(ItemNames.normalize(iconName));
-			if (!iconIds.isEmpty())
-			{
-				iconId = iconIds.get(0);
-			}
-		}
-		Integer icon = iconId;
+		IconOption selectedIcon = (IconOption) iconCombo.getSelectedItem();
+		Integer icon = selectedIcon != null ? selectedIcon.itemId : null;
 
 		importButton.setEnabled(false);
 		clientThread.invokeLater(() ->
 		{
 			try
 			{
-				importer.importSetups(tag, resolutions, invResolution, config.layoutStyle(), icon);
+				importer.importSetups(tag, resolutions, invResolution, extras, config.layoutStyle(), icon);
 				SwingUtilities.invokeLater(() ->
 				{
 					status("Imported '" + tag + "' — open your bank to see the tab", OWNED);
@@ -773,6 +947,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		currentInventories = Collections.emptyList();
 		currentResolutions = null;
 		currentInventoryResolution = null;
+		currentExtras = Collections.emptyList();
 		userPickedInventory = false;
 		userEditedTag = false;
 		userEditedIcon = false;
@@ -797,6 +972,23 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			label.setFont(label.getFont().deriveFont(Font.ITALIC, label.getFont().getSize() - 1f));
 		}
+		label.setAlignmentX(LEFT_ALIGNMENT);
+		previewPanel.add(label);
+	}
+
+	/** A preview row led by the item's sprite. */
+	private void addItemRow(int itemId, String text, Color color)
+	{
+		JLabel label = new JLabel("<html>" + text.replace("<", "&lt;") + "</html>");
+		label.setForeground(color);
+		AsyncBufferedImage img = itemManager.getImage(itemId);
+		label.setIcon(new ImageIcon(img.getScaledInstance(18, 16, Image.SCALE_SMOOTH)));
+		label.setIconTextGap(4);
+		img.onLoaded(() -> SwingUtilities.invokeLater(() ->
+		{
+			label.setIcon(new ImageIcon(img.getScaledInstance(18, 16, Image.SCALE_SMOOTH)));
+			label.repaint();
+		}));
 		label.setAlignmentX(LEFT_ALIGNMENT);
 		previewPanel.add(label);
 	}

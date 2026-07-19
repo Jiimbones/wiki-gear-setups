@@ -62,14 +62,22 @@ public final class LayoutBuilder
 	public static Layout build(String tag, List<SlotPick> picks, LayoutStyle style)
 	{
 		return build(tag, Collections.singletonList(picks), Collections.emptyList(),
-			Collections.emptyList(), style);
+			Collections.emptyList(), Collections.emptyList(), style);
 	}
 
+	/** Convenience without extras. */
 	public static Layout build(String tag, List<List<SlotPick>> gearBlocks,
 		List<InventoryPick> inventory, List<InventoryPick> runes, LayoutStyle style)
 	{
+		return build(tag, gearBlocks, inventory, runes, Collections.emptyList(), style);
+	}
+
+	public static Layout build(String tag, List<List<SlotPick>> gearBlocks,
+		List<InventoryPick> inventory, List<InventoryPick> runes,
+		List<Integer> extras, LayoutStyle style)
+	{
 		Layout layout = new Layout(tag);
-		Set<Integer> placedGear = new HashSet<>();
+		Set<Integer> placed = new HashSet<>();
 
 		if (style == LayoutStyle.EQUIPMENT_SCREEN)
 		{
@@ -78,7 +86,7 @@ public final class LayoutBuilder
 			{
 				for (SlotPick pick : sorted(block))
 				{
-					if (placedGear.add(pick.getItemId()))
+					if (placed.add(pick.getItemId()))
 					{
 						layout.setItemAtPos(pick.getItemId(),
 							blockRow * BANK_WIDTH + EQUIPMENT_SCREEN_POS.get(pick.getSlot()));
@@ -87,20 +95,37 @@ public final class LayoutBuilder
 				blockRow += ROWS_PER_BLOCK;
 			}
 			// runes sit directly under the last equipment block, left side
+			boolean runesPlaced = false;
 			for (InventoryPick rune : runes)
 			{
-				if (!placedGear.contains(rune.getItemId()))
+				if (placed.add(rune.getItemId()))
 				{
 					layout.setItemAtPos(rune.getItemId(), blockRow * BANK_WIDTH + rune.getSlot());
+					runesPlaced = true;
 				}
 			}
+			int inventoryRows = 0;
+			Set<Integer> inventoryIds = new HashSet<>();
 			for (InventoryPick pick : inventory)
 			{
-				if (!placedGear.contains(pick.getItemId()))
+				if (!placed.contains(pick.getItemId()))
 				{
 					int row = pick.getSlot() / 4;
 					int col = pick.getSlot() % 4;
 					layout.setItemAtPos(pick.getItemId(), row * BANK_WIDTH + INVENTORY_COL + col);
+					inventoryIds.add(pick.getItemId());
+					inventoryRows = Math.max(inventoryRows, row + 1);
+				}
+			}
+			placed.addAll(inventoryIds);
+			// extras (owned alternates) flow below everything, after a blank row
+			int extrasRow = Math.max(blockRow + (runesPlaced ? 1 : 0), inventoryRows) + 1;
+			int pos = extrasRow * BANK_WIDTH;
+			for (int extra : extras)
+			{
+				if (placed.add(extra))
+				{
+					layout.setItemAtPos(extra, pos++);
 				}
 			}
 		}
@@ -112,7 +137,7 @@ public final class LayoutBuilder
 				int placedInBlock = 0;
 				for (SlotPick pick : sorted(block))
 				{
-					if (placedGear.add(pick.getItemId()))
+					if (placed.add(pick.getItemId()))
 					{
 						layout.setItemAtPos(pick.getItemId(), pos++);
 						placedInBlock++;
@@ -125,16 +150,27 @@ public final class LayoutBuilder
 			}
 			for (InventoryPick pick : inventory)
 			{
-				if (!placedGear.contains(pick.getItemId()))
+				if (!placed.contains(pick.getItemId()))
 				{
 					layout.setItemAtPos(pick.getItemId(), pos++);
 				}
 			}
 			for (InventoryPick rune : runes)
 			{
-				if (!placedGear.contains(rune.getItemId()))
+				if (placed.add(rune.getItemId()))
 				{
 					layout.setItemAtPos(rune.getItemId(), pos++);
+				}
+			}
+			if (!extras.isEmpty() && pos > 0)
+			{
+				pos = ((pos + BANK_WIDTH - 1) / BANK_WIDTH + 1) * BANK_WIDTH;
+			}
+			for (int extra : extras)
+			{
+				if (placed.add(extra))
+				{
+					layout.setItemAtPos(extra, pos++);
 				}
 			}
 		}

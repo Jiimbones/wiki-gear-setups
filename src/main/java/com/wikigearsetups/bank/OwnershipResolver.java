@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.IntPredicate;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -90,6 +91,69 @@ public class OwnershipResolver
 		}
 
 		return new SetupResolution(setup, picks, unresolved, emptySlots);
+	}
+
+	/**
+	 * A two-handed weapon pick makes a shield pick contradictory — the wiki
+	 * lists shields for the one-handed alternatives. Returns the picks with
+	 * the shield removed, or the original list when nothing conflicts.
+	 */
+	public static List<SlotPick> dropShieldForTwoHanded(List<SlotPick> picks, IntPredicate isTwoHanded)
+	{
+		boolean twoHanded = false;
+		for (SlotPick pick : picks)
+		{
+			if (pick.getSlot() == EquipSlot.WEAPON && isTwoHanded.test(pick.getItemId()))
+			{
+				twoHanded = true;
+				break;
+			}
+		}
+		if (!twoHanded)
+		{
+			return picks;
+		}
+		List<SlotPick> filtered = new ArrayList<>(picks.size());
+		for (SlotPick pick : picks)
+		{
+			if (pick.getSlot() != EquipSlot.SHIELD)
+			{
+				filtered.add(pick);
+			}
+		}
+		return filtered;
+	}
+
+	/**
+	 * Owned items from the setup's ranked alternatives that were NOT picked —
+	 * switches and spec weapons the player has banked. Wiki-table order,
+	 * deduplicated, excluding {@code excludeIds} (the already-placed picks).
+	 */
+	public List<Integer> ownedAlternatives(GearSetup setup, Set<Integer> ownedIds,
+		boolean assumeSlayerTask, Set<Integer> excludeIds)
+	{
+		List<Integer> extras = new ArrayList<>();
+		for (Map.Entry<EquipSlot, List<RankedItem>> entry : setup.getSlots().entrySet())
+		{
+			for (RankedItem candidate : entry.getValue())
+			{
+				if (!assumeSlayerTask && isSlayerTaskConditional(candidate))
+				{
+					continue;
+				}
+				Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+				if (!resolved.isPresent())
+				{
+					continue;
+				}
+				Integer ownedId = firstOwned(resolved.get(), ownedIds);
+				if (ownedId != null && !excludeIds.contains(ownedId) && !extras.contains(ownedId))
+				{
+					extras.add(ownedId);
+				}
+			}
+		}
+		return extras;
 	}
 
 	/**

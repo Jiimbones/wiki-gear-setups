@@ -80,3 +80,15 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] "Open wiki page" button (LinkBrowser)
 - [x] Sidebar grid preview: item-icon grid mirroring the exact bank layout (ItemManager AsyncBufferedImage, scaled 26x24, unowned rendered dimmed/disabled). Known limits: icons load async (pop-in), 8 cols squeezed into 225px panel, no quantities shown
 - [x] 7 new tests; 82 total green
+
+## Feedback round 4 (2026-07-19)
+- [x] `ItemAliases`: generic wiki names → concrete items ("Imbued god cape" → the 3 capes + imbued max capes; "God cape"; "God book") and cross-group upgrade acceptance ("Rune pouch" ← Divine rune pouch + (l) variants)
+- [x] ItemResolver fallback chain widened: quantity markers ("2 x Shark", "Shark x28"), potion dose retry (name+"(4)": "Stamina potion" → "Stamina potion(4)"), plural retry ("Sharks") — biggest unrecognized-item sources
+- [x] Two-handed weapon drops the shield pick: `OwnershipResolver.dropShieldForTwoHanded` + `ItemStats.getEquipment().isTwoHanded()` via ItemManager (unknown stats = keep shield)
+- [x] Extras below layout: `OwnershipResolver.ownedAlternatives` (owned, unpicked wiki alternates in table order) → LayoutBuilder places them after a blank row under max(gear+runes, inventory); tagged + imported too
+- [x] Inventory auto-select upgraded to combat-style tokens (`StyleTokens`: mage/magic, range/ranged/ranging, melee) with substring fallback
+- [x] Tab icon picker renders item sprites (IconOption + DefaultListCellRenderer, non-editable, repaint on async load)
+- [x] Panel polish: banner slot (resources/com/wikigearsetups/banner.png, graceful when absent — **user must drop the logo file in**), item sprites on preview rows, styled search/import buttons, footer "Developed by Jiimbones" + Donate button (placeholder URL)
+- [x] runelite-plugin.properties author=Jiimbones
+- [x] 14 new tests; 96 total green
+- [ ] User visual verification in dev client

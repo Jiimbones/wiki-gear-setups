@@ -1,5 +1,6 @@
 package com.wikigearsetups.items;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -33,28 +34,88 @@ public class ItemResolver
 	}
 
 	private static final Pattern TRAILING_PAREN = Pattern.compile("\\s*\\([^)]*\\)$");
+	private static final Pattern LEADING_QUANTITY = Pattern.compile("^\\d+\\s*[x×]\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TRAILING_QUANTITY = Pattern.compile("\\s*[x×]\\s*\\d+$", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * Empty when the name is unknown — callers should check
 	 * {@code index.isReady()} to distinguish "unknown" from "index not built yet".
 	 *
-	 * Wiki names sometimes carry page disambiguators absent from the in-game
-	 * name ("Teleport to house (tablet)") — when an exact match fails, a
-	 * single retry drops the trailing parenthetical.
+	 * Wiki names diverge from in-game names in recurring ways, each tried in
+	 * order until one resolves: quantity markers ("2 x Shark"), potion names
+	 * without a dose ("Stamina potion" — the item is "Stamina potion(4)"),
+	 * page disambiguators ("Teleport to house (tablet)"), plurals ("Sharks"),
+	 * and generic names with no item of their own ("Imbued god cape").
 	 */
 	public Optional<ResolvedItem> resolve(String wikiName)
 	{
-		Optional<ResolvedItem> exact = resolveExact(wikiName);
-		if (exact.isPresent())
+		for (String candidate : candidateNames(wikiName))
 		{
-			return exact;
-		}
-		String stripped = TRAILING_PAREN.matcher(wikiName.trim()).replaceFirst("");
-		if (!stripped.isEmpty() && !stripped.equals(wikiName.trim()))
-		{
-			return resolveExact(stripped);
+			Optional<ResolvedItem> resolved = resolveExact(candidate);
+			if (!resolved.isPresent())
+			{
+				resolved = resolveGeneric(candidate);
+			}
+			if (resolved.isPresent())
+			{
+				return resolved;
+			}
 		}
 		return Optional.empty();
+	}
+
+	private static List<String> candidateNames(String wikiName)
+	{
+		Set<String> names = new LinkedHashSet<>();
+		String raw = wikiName.trim();
+		names.add(raw);
+		String base = LEADING_QUANTITY.matcher(raw).replaceFirst("");
+		base = TRAILING_QUANTITY.matcher(base).replaceFirst("").trim();
+		names.add(base);
+		if (!base.endsWith(")"))
+		{
+			names.add(base + "(4)");
+		}
+		String noParen = TRAILING_PAREN.matcher(base).replaceFirst("");
+		if (!noParen.isEmpty())
+		{
+			names.add(noParen);
+		}
+		if (base.length() > 3 && base.endsWith("s"))
+		{
+			String singular = base.substring(0, base.length() - 1);
+			names.add(singular);
+			names.add(singular + "(4)");
+		}
+		names.remove("");
+		return new ArrayList<>(names);
+	}
+
+	/** Generic wiki names ("Imbued god cape") accept any of their concrete items. */
+	private Optional<ResolvedItem> resolveGeneric(String name)
+	{
+		List<String> concrete = ItemAliases.genericFor(name);
+		if (concrete.isEmpty())
+		{
+			return Optional.empty();
+		}
+		Integer primary = null;
+		Set<Integer> acceptable = new LinkedHashSet<>();
+		for (String c : concrete)
+		{
+			Optional<ResolvedItem> resolved = resolveExact(c);
+			if (resolved.isPresent())
+			{
+				if (primary == null)
+				{
+					primary = resolved.get().getPrimaryId();
+				}
+				acceptable.addAll(resolved.get().getAcceptableIds());
+			}
+		}
+		return primary == null
+			? Optional.empty()
+			: Optional.of(new ResolvedItem(name, primary, acceptable));
 	}
 
 	private Optional<ResolvedItem> resolveExact(String wikiName)
@@ -86,6 +147,13 @@ public class ItemResolver
 					acceptable.add(variant);
 				}
 			}
+		}
+
+		// distinct upgrade items in other variation groups (Divine rune pouch
+		// for "Rune pouch") also satisfy the recommendation
+		for (String upgrade : ItemAliases.upgradesFor(wiki))
+		{
+			resolveExact(upgrade).ifPresent(r -> acceptable.addAll(r.getAcceptableIds()));
 		}
 
 		return Optional.of(new ResolvedItem(wikiName, primary.get(0), acceptable));

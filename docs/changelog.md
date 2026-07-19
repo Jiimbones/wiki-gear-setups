@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-19: Feedback round 4 — ItemAliases (imbued god capes, divine rune pouch upgrades), resolver quantity/dose/plural fallbacks, 2h-weapon shield drop, owned-alternates extras below layout, style-token inventory auto-select, sprite-rendered icon picker, banner slot + Jiimbones footer + donate placeholder; 96 tests green.
 - 2026-07-19: Feedback round 3 — placeholder item mapping (Cheap food etc.), wiki-disambiguator name fallback, OMIT→SHOW config migration, sidebar item-grid layout preview, icon dropdown, wiki page link, robust tag-name auto-refresh; 82 tests green.
 - 2026-07-19: Feedback round 2 — positional {{Inventory}} params (fixes GotR + similar pages), {{Rune pouch}} → runes under equipment block, SHOW_BEST_UNOWNED default, inventory auto-select, editable tag name/icon fields; 78 tests green.
 - 2026-07-19: v1.1 — inventory import ({{Inventory}} parsing → grid right half), hastemplate search filtering (no more "Venom"), "All styles" combined import for multi-style content; importer API now takes setup lists + optional inventory; 72 tests green.

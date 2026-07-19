@@ -49,6 +49,44 @@ public class OwnershipResolverTest
 	}
 
 	@Test
+	public void twoHandedWeaponDropsShieldPick()
+	{
+		List<SlotPick> picks = Arrays.asList(
+			new SlotPick(EquipSlot.WEAPON, new RankedItem("Elder maul", 1, null), 100, true, true),
+			new SlotPick(EquipSlot.SHIELD, new RankedItem("Dragon defender", 1, null), 200, true, true),
+			new SlotPick(EquipSlot.HEAD, new RankedItem("Neitiznot", 1, null), 300, true, true));
+
+		List<SlotPick> filtered = OwnershipResolver.dropShieldForTwoHanded(picks, id -> id == 100);
+
+		assertEquals(2, filtered.size());
+		assertFalse(filtered.stream().anyMatch(p -> p.getSlot() == EquipSlot.SHIELD));
+	}
+
+	@Test
+	public void oneHandedWeaponKeepsShieldPick()
+	{
+		List<SlotPick> picks = Arrays.asList(
+			new SlotPick(EquipSlot.WEAPON, new RankedItem("Abyssal whip", 1, null), 100, true, true),
+			new SlotPick(EquipSlot.SHIELD, new RankedItem("Dragon defender", 1, null), 200, true, true));
+
+		assertEquals(picks, OwnershipResolver.dropShieldForTwoHanded(picks, id -> false));
+	}
+
+	@Test
+	public void ownedAlternativesReturnsUnpickedOwnedItems()
+	{
+		GearSetup s = setup(EquipSlot.NECK,
+			new RankedItem("Occult necklace", 1, null),
+			new RankedItem("Amulet of fury", 2, null));
+
+		List<Integer> extras = resolver.ownedAlternatives(s,
+			owned(OCCULT_NECKLACE, AMULET_OF_FURY), false,
+			owned(OCCULT_NECKLACE)); // the pick is excluded
+
+		assertEquals(Collections.singletonList(AMULET_OF_FURY), extras);
+	}
+
+	@Test
 	public void topRecommendationPickedWhenOwned()
 	{
 		GearSetup s = setup(EquipSlot.NECK,

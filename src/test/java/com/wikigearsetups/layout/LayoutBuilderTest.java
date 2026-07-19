@@ -77,6 +77,37 @@ public class LayoutBuilderTest
 	}
 
 	@Test
+	public void extrasFlowBelowEquipmentScreenLayout()
+	{
+		List<SlotPick> picks = Collections.singletonList(pick(EquipSlot.WEAPON, 400));
+
+		Layout layout = LayoutBuilder.build("t", Collections.singletonList(picks),
+			Collections.emptyList(), Collections.emptyList(),
+			Arrays.asList(50, 60), LayoutStyle.EQUIPMENT_SCREEN);
+
+		// one gear block occupies rows 0-4, row 5 stays blank, extras start row 6
+		assertEquals(50, layout.getItemAtPos(48));
+		assertEquals(60, layout.getItemAtPos(49));
+		for (int pos = 40; pos < 48; pos++)
+		{
+			assertEquals(-1, layout.getItemAtPos(pos));
+		}
+	}
+
+	@Test
+	public void extrasSkipItemsAlreadyPlaced()
+	{
+		List<SlotPick> picks = Collections.singletonList(pick(EquipSlot.WEAPON, 400));
+
+		Layout layout = LayoutBuilder.build("t", Collections.singletonList(picks),
+			Collections.emptyList(), Collections.emptyList(),
+			Arrays.asList(400, 60), LayoutStyle.EQUIPMENT_SCREEN);
+
+		assertEquals(60, layout.getItemAtPos(48));
+		assertEquals(-1, layout.getItemAtPos(49));
+	}
+
+	@Test
 	public void deterministicAcrossShuffledInput()
 	{
 		List<SlotPick> picks = new ArrayList<>(Arrays.asList(

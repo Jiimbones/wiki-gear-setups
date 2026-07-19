@@ -67,12 +67,25 @@ public class BankTagImporter
 	/** Single-setup convenience. */
 	public void importSetup(String tag, SetupResolution resolution, LayoutStyle layoutStyle)
 	{
-		importSetups(tag, Collections.singletonList(resolution), null, layoutStyle, null);
+		importSetups(tag, Collections.singletonList(resolution), null,
+			Collections.emptyList(), layoutStyle, null);
 	}
 
-	/** Imports the setups (and optional inventory) as bank tag {@code tag}. Client thread only. */
+	/** Convenience without extras. */
 	public void importSetups(String tag, List<SetupResolution> resolutions,
 		@Nullable InventoryResolution inventory, LayoutStyle layoutStyle, @Nullable Integer iconItemId)
+	{
+		importSetups(tag, resolutions, inventory, Collections.emptyList(), layoutStyle, iconItemId);
+	}
+
+	/**
+	 * Imports the setups (and optional inventory) as bank tag {@code tag};
+	 * {@code extraItemIds} (owned alternates) land below the layout. Client
+	 * thread only.
+	 */
+	public void importSetups(String tag, List<SetupResolution> resolutions,
+		@Nullable InventoryResolution inventory, List<Integer> extraItemIds,
+		LayoutStyle layoutStyle, @Nullable Integer iconItemId)
 	{
 		if (!isBankTagsEnabled())
 		{
@@ -103,6 +116,7 @@ public class BankTagImporter
 		{
 			itemIds.add(pick.getItemId());
 		}
+		itemIds.addAll(extraItemIds);
 
 		if (itemIds.isEmpty())
 		{
@@ -116,7 +130,7 @@ public class BankTagImporter
 			tagManager.addTag(itemId, tag, false);
 		}
 
-		Layout layout = LayoutBuilder.build(tag, gearBlocks, inventoryPicks, runePicks, layoutStyle);
+		Layout layout = LayoutBuilder.build(tag, gearBlocks, inventoryPicks, runePicks, extraItemIds, layoutStyle);
 		layoutManager.saveLayout(layout);
 
 		int icon = iconItemId != null ? iconItemId : iconFor(resolutions);

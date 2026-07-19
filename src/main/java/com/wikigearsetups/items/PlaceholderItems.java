@@ -24,6 +24,8 @@ public final class PlaceholderItems
 			"Anglerfish", "Manta ray", "Dark crab", "Shark"));
 		CANDIDATES.put("cheap prayer", Arrays.asList(
 			"Prayer potion(4)", "Super restore(4)"));
+		CANDIDATES.put("combo food", Arrays.asList(
+			"Cooked karambwan", "Potato with cheese"));
 	}
 
 	private PlaceholderItems()

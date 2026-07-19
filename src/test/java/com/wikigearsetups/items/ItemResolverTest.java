@@ -153,6 +153,53 @@ public class ItemResolverTest
 	}
 
 	@Test
+	public void divineRunePouchSatisfiesRunePouchRecommendation()
+	{
+		ItemResolver r = resolver(
+			12791, "Rune pouch",
+			27281, "Divine rune pouch");
+		ResolvedItem item = r.resolve("Rune pouch").orElseThrow(AssertionError::new);
+		assertEquals(12791, item.getPrimaryId());
+		assertTrue("divine upgrade satisfies rune pouch", item.getAcceptableIds().contains(27281));
+	}
+
+	@Test
+	public void imbuedGodCapeGenericAcceptsAnyGodCape()
+	{
+		ItemResolver r = resolver(
+			21791, "Imbued saradomin cape",
+			21793, "Imbued guthix cape",
+			21795, "Imbued zamorak cape");
+		ResolvedItem item = r.resolve("Imbued god cape").orElseThrow(AssertionError::new);
+		assertTrue(item.getAcceptableIds().contains(21791));
+		assertTrue(item.getAcceptableIds().contains(21793));
+		assertTrue(item.getAcceptableIds().contains(21795));
+	}
+
+	@Test
+	public void potionNameWithoutDoseResolvesToFourDose()
+	{
+		ItemResolver r = resolver(12625, "Stamina potion(4)");
+		ResolvedItem item = r.resolve("Stamina potion").orElseThrow(AssertionError::new);
+		assertEquals(12625, item.getPrimaryId());
+	}
+
+	@Test
+	public void quantityMarkersAreStripped()
+	{
+		ItemResolver r = resolver(ABYSSAL_WHIP, "Abyssal whip", 385, "Shark");
+		assertTrue(r.resolve("2 x Shark").isPresent());
+		assertTrue(r.resolve("Shark x28").isPresent());
+	}
+
+	@Test
+	public void pluralNameFallsBackToSingular()
+	{
+		ItemResolver r = resolver(385, "Shark");
+		assertTrue(r.resolve("Sharks").isPresent());
+	}
+
+	@Test
 	public void stripChargeDecorations()
 	{
 		assertEquals("black mask (i)", ItemNames.stripChargeDecorations("black mask (10) (i)"));
