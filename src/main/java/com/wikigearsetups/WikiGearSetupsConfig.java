@@ -1,5 +1,6 @@
 package com.wikigearsetups;
 
+import com.wikigearsetups.layout.LayoutStyle;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -37,5 +38,27 @@ public interface WikiGearSetupsConfig extends Config
 	default MissingGearBehavior missingGearBehavior()
 	{
 		return MissingGearBehavior.OMIT;
+	}
+
+	@ConfigItem(
+		keyName = "layoutStyle",
+		name = "Layout shape",
+		description = "Arrange imported tabs like the worn equipment screen (inventory-ready), or as packed rows",
+		position = 1
+	)
+	default LayoutStyle layoutStyle()
+	{
+		return LayoutStyle.EQUIPMENT_SCREEN;
+	}
+
+	@ConfigItem(
+		keyName = "assumeSlayerTask",
+		name = "Assume on slayer task",
+		description = "Include recommendations that only apply while on a slayer task, such as the slayer helmet",
+		position = 2
+	)
+	default boolean assumeSlayerTask()
+	{
+		return false;
 	}
 }

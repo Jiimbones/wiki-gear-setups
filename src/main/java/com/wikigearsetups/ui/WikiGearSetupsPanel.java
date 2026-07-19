@@ -241,7 +241,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 			Set<Integer> owned = bankStateCache.ownedItemIds();
 			boolean hasSnapshot = bankStateCache.hasSnapshot();
-			SetupResolution resolution = ownershipResolver.resolve(setup, owned, config.missingGearBehavior());
+			SetupResolution resolution = ownershipResolver.resolve(setup, owned,
+				config.missingGearBehavior(), config.assumeSlayerTask());
 			SwingUtilities.invokeLater(() -> showPreview(resolution, hasSnapshot));
 		});
 	}
@@ -333,7 +334,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			try
 			{
-				importer.importSetup(tag, resolution);
+				importer.importSetup(tag, resolution, config.layoutStyle());
 				SwingUtilities.invokeLater(() ->
 				{
 					status("Imported '" + tag + "' — open your bank to see the tab", OWNED);

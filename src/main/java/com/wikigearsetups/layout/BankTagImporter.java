@@ -56,7 +56,7 @@ public class BankTagImporter
 	}
 
 	/** Imports the setup as bank tag {@code tag}. Client thread only. */
-	public void importSetup(String tag, SetupResolution resolution)
+	public void importSetup(String tag, SetupResolution resolution, LayoutStyle layoutStyle)
 	{
 		if (!isBankTagsEnabled())
 		{
@@ -74,7 +74,7 @@ public class BankTagImporter
 			tagManager.addTag(pick.getItemId(), tag, false);
 		}
 
-		Layout layout = LayoutBuilder.build(tag, resolution.getPicks());
+		Layout layout = LayoutBuilder.build(tag, resolution.getPicks(), layoutStyle);
 		layoutManager.saveLayout(layout);
 
 		int icon = iconFor(resolution);

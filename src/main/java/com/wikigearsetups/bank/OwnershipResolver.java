@@ -32,7 +32,8 @@ public class OwnershipResolver
 		this.itemResolver = itemResolver;
 	}
 
-	public SetupResolution resolve(GearSetup setup, Set<Integer> ownedIds, MissingGearBehavior missingBehavior)
+	public SetupResolution resolve(GearSetup setup, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
+		boolean assumeSlayerTask)
 	{
 		List<SlotPick> picks = new ArrayList<>();
 		Map<EquipSlot, List<String>> unresolved = new EnumMap<>(EquipSlot.class);
@@ -50,6 +51,10 @@ public class OwnershipResolver
 			for (int i = 0; i < alternatives.size(); i++)
 			{
 				RankedItem candidate = alternatives.get(i);
+				if (!assumeSlayerTask && isSlayerTaskConditional(candidate))
+				{
+					continue;
+				}
 				Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
 				if (!resolved.isPresent())
 				{
@@ -85,6 +90,23 @@ public class OwnershipResolver
 		}
 
 		return new SetupResolution(setup, picks, unresolved, emptySlots);
+	}
+
+	/**
+	 * Wiki footnotes flag items that are only best-in-slot while on a slayer
+	 * task (e.g. "If on a Zulrah slayer boss task" on the slayer helmet).
+	 * When the user isn't assuming a task, such items are skipped entirely —
+	 * they must satisfy neither ownership nor the goal-item fallback.
+	 */
+	static boolean isSlayerTaskConditional(RankedItem item)
+	{
+		String note = item.getNote();
+		if (note == null)
+		{
+			return false;
+		}
+		String n = note.toLowerCase(java.util.Locale.ROOT);
+		return n.contains("slayer") && n.contains("task");
 	}
 
 	/**

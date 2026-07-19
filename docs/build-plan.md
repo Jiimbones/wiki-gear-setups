@@ -50,5 +50,10 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Runtime verification 2026-07-19: live Jagex account in dev client (credentials via `--insecure-write-credentials` flow, RuneLite.exe at G:\Runelite\RuneLite). Bank snapshot 883 items; imports verified on ToA, Hespori, Vorkath, GotR, Duke Sucellus, Zulrah ×3 styles; re-import overwrite exercised. No plugin errors.
 - [ ] README screenshots + hub submission (fork runelite/plugin-hub, add manifest; icon.png for listing)
 
+## Post-verification feedback (2026-07-19, user tested live)
+- [x] Slayer-task-conditional items: efn note matching "slayer"+"task" → skipped unless `assumeSlayerTask` config (default off). Applies to ownership AND goal fallback. Informational notes unaffected.
+- [x] `LayoutStyle` config (default EQUIPMENT_SCREEN): mirrors worn-equipment interface in bank grid cols 0-3 (head@1; cape/neck/ammo@8-10; weapon/body/shield/special@16-19; legs@25; hands/feet/ring@32-34); cols 4-7 reserved for v1.1 inventory. COMPACT = old packed rows.
+- [ ] User to visually verify equipment-screen layout + slayer skip in dev client
+
 ## v1.1 (out of scope for v1)
-- Suggested inventory (potions/runes/food) parsing → layout inventory section
+- Suggested inventory (potions/runes/food) parsing → layout inventory section (place in grid cols 4-7, like the user's reference screenshot)

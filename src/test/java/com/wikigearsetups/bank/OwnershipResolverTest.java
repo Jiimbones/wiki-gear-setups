@@ -54,7 +54,7 @@ public class OwnershipResolverTest
 		GearSetup s = setup(EquipSlot.NECK,
 			new RankedItem("Occult necklace", 1, null),
 			new RankedItem("Amulet of fury", 2, null));
-		SetupResolution r = resolver.resolve(s, owned(OCCULT_NECKLACE, AMULET_OF_FURY), MissingGearBehavior.OMIT);
+		SetupResolution r = resolver.resolve(s, owned(OCCULT_NECKLACE, AMULET_OF_FURY), MissingGearBehavior.OMIT, false);
 
 		assertEquals(1, r.getPicks().size());
 		SlotPick pick = r.getPicks().get(0);
@@ -69,7 +69,7 @@ public class OwnershipResolverTest
 		GearSetup s = setup(EquipSlot.NECK,
 			new RankedItem("Occult necklace", 1, null),
 			new RankedItem("Amulet of fury", 2, null));
-		SetupResolution r = resolver.resolve(s, owned(AMULET_OF_FURY), MissingGearBehavior.OMIT);
+		SetupResolution r = resolver.resolve(s, owned(AMULET_OF_FURY), MissingGearBehavior.OMIT, false);
 
 		SlotPick pick = r.getPicks().get(0);
 		assertEquals(AMULET_OF_FURY, pick.getItemId());
@@ -81,7 +81,7 @@ public class OwnershipResolverTest
 	public void ownedVariantIdIsPlacedNotTheBaseId()
 	{
 		GearSetup s = setup(EquipSlot.BODY, new RankedItem("Karil's leathertop", 1, null));
-		SetupResolution r = resolver.resolve(s, owned(KARILS_LEATHERTOP_100), MissingGearBehavior.OMIT);
+		SetupResolution r = resolver.resolve(s, owned(KARILS_LEATHERTOP_100), MissingGearBehavior.OMIT, false);
 
 		assertEquals(KARILS_LEATHERTOP_100, r.getPicks().get(0).getItemId());
 	}
@@ -91,7 +91,7 @@ public class OwnershipResolverTest
 	{
 		GearSetup s = setup(EquipSlot.BODY, new RankedItem("Karil's leathertop", 1, null));
 		SetupResolution r = resolver.resolve(s,
-			owned(KARILS_LEATHERTOP, KARILS_LEATHERTOP_100), MissingGearBehavior.OMIT);
+			owned(KARILS_LEATHERTOP, KARILS_LEATHERTOP_100), MissingGearBehavior.OMIT, false);
 
 		assertEquals(KARILS_LEATHERTOP, r.getPicks().get(0).getItemId());
 	}
@@ -100,7 +100,7 @@ public class OwnershipResolverTest
 	public void missingSlotOmittedByDefault()
 	{
 		GearSetup s = setup(EquipSlot.NECK, new RankedItem("Occult necklace", 1, null));
-		SetupResolution r = resolver.resolve(s, Collections.emptySet(), MissingGearBehavior.OMIT);
+		SetupResolution r = resolver.resolve(s, Collections.emptySet(), MissingGearBehavior.OMIT, false);
 
 		assertTrue(r.getPicks().isEmpty());
 		assertEquals(Collections.singletonList(EquipSlot.NECK), r.getEmptySlots());
@@ -112,7 +112,7 @@ public class OwnershipResolverTest
 		GearSetup s = setup(EquipSlot.NECK,
 			new RankedItem("Occult necklace", 1, null),
 			new RankedItem("Amulet of fury", 2, null));
-		SetupResolution r = resolver.resolve(s, Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED);
+		SetupResolution r = resolver.resolve(s, Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED, false);
 
 		assertTrue(r.getEmptySlots().isEmpty());
 		SlotPick pick = r.getPicks().get(0);
@@ -126,7 +126,7 @@ public class OwnershipResolverTest
 		GearSetup s = setup(EquipSlot.NECK,
 			new RankedItem("Necklace of made-up power", 1, null),
 			new RankedItem("Amulet of fury", 2, null));
-		SetupResolution r = resolver.resolve(s, owned(AMULET_OF_FURY), MissingGearBehavior.OMIT);
+		SetupResolution r = resolver.resolve(s, owned(AMULET_OF_FURY), MissingGearBehavior.OMIT, false);
 
 		assertEquals(Collections.singletonList("Necklace of made-up power"),
 			r.getUnresolvedNames().get(EquipSlot.NECK));
@@ -137,9 +137,63 @@ public class OwnershipResolverTest
 	public void allNamesUnresolvedLeavesSlotEmptyEvenWithGoalConfig()
 	{
 		GearSetup s = setup(EquipSlot.NECK, new RankedItem("Necklace of made-up power", 1, null));
-		SetupResolution r = resolver.resolve(s, Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED);
+		SetupResolution r = resolver.resolve(s, Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED, false);
 
 		assertTrue(r.getPicks().isEmpty());
 		assertEquals(Collections.singletonList(EquipSlot.NECK), r.getEmptySlots());
+	}
+
+	private static final int SLAYER_HELMET_I = 11865;
+	private static final int ANCESTRAL_HAT = 21018;
+
+	private OwnershipResolver slayerResolver()
+	{
+		return new OwnershipResolver(new ItemResolver(FakeItemNameIndex.of(
+			SLAYER_HELMET_I, "Slayer helmet (i)",
+			ANCESTRAL_HAT, "Ancestral hat")));
+	}
+
+	private static GearSetup slayerSetup()
+	{
+		return setup(EquipSlot.HEAD,
+			new RankedItem("Slayer helmet (i)", 1, "If on a Zulrah slayer boss task"),
+			new RankedItem("Ancestral hat", 1, null));
+	}
+
+	@Test
+	public void slayerConditionalSkippedWhenOffTask()
+	{
+		SetupResolution r = slayerResolver().resolve(slayerSetup(),
+			owned(SLAYER_HELMET_I, ANCESTRAL_HAT), MissingGearBehavior.OMIT, false);
+
+		assertEquals(ANCESTRAL_HAT, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void slayerConditionalPickedWhenOnTask()
+	{
+		SetupResolution r = slayerResolver().resolve(slayerSetup(),
+			owned(SLAYER_HELMET_I, ANCESTRAL_HAT), MissingGearBehavior.OMIT, true);
+
+		assertEquals(SLAYER_HELMET_I, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void slayerConditionalNeverBecomesGoalItemOffTask()
+	{
+		SetupResolution r = slayerResolver().resolve(slayerSetup(),
+			Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED, false);
+
+		assertEquals("goal falls to the unconditional alternative",
+			ANCESTRAL_HAT, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void informationalNotesAreNotTreatedAsSlayerConditional()
+	{
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Serpentine helm", 1, "Negates the need to bring anti-venom potions")));
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Slayer helmet (i)", 1, "If on a slayer task")));
 	}
 }
