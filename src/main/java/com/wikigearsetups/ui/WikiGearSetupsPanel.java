@@ -68,7 +68,6 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
-import net.runelite.client.ui.components.IconTextField;
 import net.runelite.client.util.AsyncBufferedImage;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
@@ -107,7 +106,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final ClientThread clientThread;
 	private final WikiGearSetupsConfig config;
 
-	private final IconTextField searchField = new IconTextField();
+	private final FlatTextField searchField = new FlatTextField();
 	private final JLabel statusLabel = new JLabel(" ");
 	private final DefaultListModel<String> resultsModel = new DefaultListModel<>();
 	private final JList<String> resultsList = new JList<>(resultsModel);
@@ -168,14 +167,26 @@ public class WikiGearSetupsPanel extends PluginPanel
 		searchRow.setOpaque(false);
 		searchRow.setAlignmentX(LEFT_ALIGNMENT);
 		JButton searchButton = new RoundedButton("Search");
-		searchField.setIcon(IconTextField.Icon.SEARCH);
-		searchField.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		searchField.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
+		styleFlatField(searchField);
 		searchField.setPreferredSize(new Dimension(0, 30));
 		searchField.addActionListener(e -> doSearch());
 		searchButton.addActionListener(e -> doSearch());
+		JButton clearButton = new RoundedButton("✕");
+		clearButton.setToolTipText("Clear search");
+		clearButton.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+		clearButton.addActionListener(e ->
+		{
+			searchField.setText("");
+			searchField.requestFocusInWindow();
+		});
+		JPanel searchButtons = new JPanel();
+		searchButtons.setOpaque(false);
+		searchButtons.setLayout(new BoxLayout(searchButtons, BoxLayout.X_AXIS));
+		searchButtons.add(clearButton);
+		searchButtons.add(Box.createHorizontalStrut(4));
+		searchButtons.add(searchButton);
 		searchRow.add(searchField, BorderLayout.CENTER);
-		searchRow.add(searchButton, BorderLayout.EAST);
+		searchRow.add(searchButtons, BorderLayout.EAST);
 		searchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
 		north.add(searchRow);
 		north.add(Box.createVerticalStrut(4));
@@ -265,8 +276,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		tagNameField.getDocument().addDocumentListener(userEditListener(
 			() -> tagNameField.getTextField().hasFocus(), () -> userEditedTag = true));
-		tagNameField.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-		tagNameField.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
+		styleFlatField(tagNameField);
 		tagNameField.setPreferredSize(new Dimension(0, 26));
 		flow.add(labeledRow("Tag name", tagNameField));
 		flow.add(Box.createVerticalStrut(4));
@@ -301,6 +311,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		// footer pinned to the very bottom regardless of content height
 		add(footer(), BorderLayout.SOUTH);
+	}
+
+	/** The LAF paints field text dark — force light text on the inner field. */
+	private static void styleFlatField(FlatTextField field)
+	{
+		field.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		field.setHoverBackgroundColor(ColorScheme.DARK_GRAY_HOVER_COLOR);
+		field.getTextField().setForeground(Color.WHITE);
+		field.getTextField().setCaretColor(Color.WHITE);
+		field.getTextField().setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
 	}
 
 	/**
