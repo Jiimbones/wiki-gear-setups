@@ -50,6 +50,9 @@ public class WikiGearSetupsPlugin extends Plugin
 	private ClientToolbar clientToolbar;
 
 	@Inject
+	private ConfigManager configManager;
+
+	@Inject
 	private WikiGearSetupsPanel panel;
 
 	private NavigationButton navButton;
@@ -63,6 +66,8 @@ public class WikiGearSetupsPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		migrateDefaults();
+
 		BufferedImage icon = ImageUtil.loadImageResource(WikiGearSetupsPlugin.class, "icon.png");
 		navButton = NavigationButton.builder()
 			.tooltip("Wiki Gear Setups")
@@ -108,6 +113,26 @@ public class WikiGearSetupsPlugin extends Plugin
 		if (event.getContainerId() == InventoryID.BANK)
 		{
 			bankStateCache.updateFromContainer(event.getItemContainer());
+		}
+	}
+
+	/**
+	 * Pre-release installs stored OMIT under the old default; the intended
+	 * default is now SHOW_BEST_UNOWNED. One-time flip, marker-guarded so a
+	 * deliberate later choice of OMIT sticks.
+	 */
+	private void migrateDefaults()
+	{
+		String marker = configManager.getConfiguration(WikiGearSetupsConfig.GROUP, "migratedShowBestDefault");
+		if (marker == null)
+		{
+			String stored = configManager.getConfiguration(WikiGearSetupsConfig.GROUP, "missingGearBehavior");
+			if ("OMIT".equals(stored))
+			{
+				configManager.setConfiguration(WikiGearSetupsConfig.GROUP, "missingGearBehavior",
+					WikiGearSetupsConfig.MissingGearBehavior.SHOW_BEST_UNOWNED);
+			}
+			configManager.setConfiguration(WikiGearSetupsConfig.GROUP, "migratedShowBestDefault", "1");
 		}
 	}
 

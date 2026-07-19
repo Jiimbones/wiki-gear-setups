@@ -2,6 +2,7 @@ package com.wikigearsetups.bank;
 
 import com.wikigearsetups.WikiGearSetupsConfig.MissingGearBehavior;
 import com.wikigearsetups.items.ItemResolver;
+import com.wikigearsetups.items.PlaceholderItems;
 import com.wikigearsetups.items.ResolvedItem;
 import com.wikigearsetups.wiki.InventorySetup;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class InventoryResolver
 		Optional<ResolvedItem> resolved = itemResolver.resolve(name);
 		if (!resolved.isPresent())
 		{
-			unresolved.add(name);
+			resolvePlaceholder(name, slot, ownedIds, missingBehavior, out, unresolved, missing);
 			return;
 		}
 
@@ -77,6 +78,53 @@ public class InventoryResolver
 			{
 				out.add(new InventoryPick(slot, resolved.get().getPrimaryId(), false));
 			}
+		}
+	}
+
+	/**
+	 * Placeholder templates ({{Cheap food}}) become whichever concrete
+	 * candidate the player owns; failing that, the first candidate as a goal
+	 * item under SHOW_BEST_UNOWNED. Unknown placeholders stay unresolved.
+	 */
+	private void resolvePlaceholder(String name, int slot, Set<Integer> ownedIds,
+		MissingGearBehavior missingBehavior, List<InventoryPick> out, Set<String> unresolved, int[] missing)
+	{
+		List<String> candidates = PlaceholderItems.candidatesFor(name);
+		if (candidates.isEmpty())
+		{
+			unresolved.add(name);
+			return;
+		}
+
+		ResolvedItem firstResolvable = null;
+		for (String candidate : candidates)
+		{
+			Optional<ResolvedItem> resolved = itemResolver.resolve(candidate);
+			if (!resolved.isPresent())
+			{
+				continue;
+			}
+			if (firstResolvable == null)
+			{
+				firstResolvable = resolved.get();
+			}
+			Integer ownedId = firstOwned(resolved.get(), ownedIds);
+			if (ownedId != null)
+			{
+				out.add(new InventoryPick(slot, ownedId, true));
+				return;
+			}
+		}
+
+		if (firstResolvable == null)
+		{
+			unresolved.add(name);
+			return;
+		}
+		missing[0]++;
+		if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED)
+		{
+			out.add(new InventoryPick(slot, firstResolvable.getPrimaryId(), false));
 		}
 	}
 

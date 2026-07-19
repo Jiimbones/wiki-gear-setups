@@ -4,6 +4,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.client.game.ItemVariationMapping;
@@ -31,11 +32,32 @@ public class ItemResolver
 		this.index = index;
 	}
 
+	private static final Pattern TRAILING_PAREN = Pattern.compile("\\s*\\([^)]*\\)$");
+
 	/**
 	 * Empty when the name is unknown — callers should check
 	 * {@code index.isReady()} to distinguish "unknown" from "index not built yet".
+	 *
+	 * Wiki names sometimes carry page disambiguators absent from the in-game
+	 * name ("Teleport to house (tablet)") — when an exact match fails, a
+	 * single retry drops the trailing parenthetical.
 	 */
 	public Optional<ResolvedItem> resolve(String wikiName)
+	{
+		Optional<ResolvedItem> exact = resolveExact(wikiName);
+		if (exact.isPresent())
+		{
+			return exact;
+		}
+		String stripped = TRAILING_PAREN.matcher(wikiName.trim()).replaceFirst("");
+		if (!stripped.isEmpty() && !stripped.equals(wikiName.trim()))
+		{
+			return resolveExact(stripped);
+		}
+		return Optional.empty();
+	}
+
+	private Optional<ResolvedItem> resolveExact(String wikiName)
 	{
 		String wiki = ItemNames.normalize(wikiName);
 		List<Integer> primary = index.idsByName(wiki);

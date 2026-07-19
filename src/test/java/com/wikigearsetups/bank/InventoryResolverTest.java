@@ -73,12 +73,33 @@ public class InventoryResolverTest
 	}
 
 	@Test
-	public void placeholdersLandInUnresolvedOnce()
+	public void cheapFoodPlaceholderBecomesOwnedFood()
 	{
 		InventoryResolution r = resolver.resolve(setup("Cheap food", "Shark", "Cheap food"),
 			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
-		assertEquals(Collections.singletonList("Cheap food"), r.getUnresolvedNames());
+		// all three slots fill with the shark the player owns
+		assertEquals(3, r.getPicks().size());
+		assertEquals(SHARK, r.getPicks().get(0).getItemId());
+		assertTrue(r.getUnresolvedNames().isEmpty());
+	}
+
+	@Test
+	public void cheapFoodWithNothingOwnedBecomesGoalUnderShowConfig()
+	{
+		InventoryResolution r = resolver.resolve(setup("Cheap food"),
+			Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED);
 		assertEquals(1, r.getPicks().size());
+		assertFalse(r.getPicks().get(0).isOwned());
+		assertEquals(SHARK, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void unknownPlaceholdersStillLandInUnresolved()
+	{
+		InventoryResolution r = resolver.resolve(setup("Fancy nonexistent widget"),
+			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
+		assertEquals(Collections.singletonList("Fancy nonexistent widget"), r.getUnresolvedNames());
+		assertTrue(r.getPicks().isEmpty());
 	}
 
 	@Test

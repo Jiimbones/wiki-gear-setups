@@ -134,6 +134,25 @@ public class ItemResolverTest
 	}
 
 	@Test
+	public void wikiDisambiguatorSuffixIsRetriedWithoutParenthetical()
+	{
+		int houseTab = 8013;
+		ItemResolver r = resolver(houseTab, "Teleport to house");
+		ResolvedItem item = r.resolve("Teleport to house (tablet)").orElseThrow(AssertionError::new);
+		assertEquals(houseTab, item.getPrimaryId());
+	}
+
+	@Test
+	public void meaningfulParentheticalsAreNotStrippedWhenTheyResolve()
+	{
+		// "(i)" resolves directly — the fallback must not kick in and widen the match
+		ItemResolver r = resolver(
+			BLACK_MASK, "Black mask",
+			BLACK_MASK_I, "Black mask (i)");
+		assertEquals(BLACK_MASK_I, (int) r.resolve("Black mask (i)").orElseThrow(AssertionError::new).getPrimaryId());
+	}
+
+	@Test
 	public void stripChargeDecorations()
 	{
 		assertEquals("black mask (i)", ItemNames.stripChargeDecorations("black mask (10) (i)"));

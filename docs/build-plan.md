@@ -72,3 +72,11 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Inventory auto-select: single inventory → selected; multiple → label⊃style match; manual pick sticks per page
 - [x] Editable tag name + tab icon item fields, prefilled with recommendation, user edits respected until page/style change; custom tag sanitized via TagNames.sanitize
 - [x] 6 new tests; 78 total green
+
+## Feedback round 3 (2026-07-19)
+- [x] Empty-slot root causes fixed: (a) one-time config migration OMIT→SHOW_BEST_UNOWNED (marker `migratedShowBestDefault` — user's stored old default was suppressing placeholders); (b) `PlaceholderItems`: {{Cheap food}}/{{High healing food}}/{{Cheap prayer}} → concrete candidate lists, first-owned wins, goal fallback; (c) ItemResolver retries without trailing parenthetical for wiki disambiguators ("Teleport to house (tablet)")
+- [x] Stale tag name fixed: explicit user-edit tracking (DocumentListener + focus) instead of text-equality heuristic; resets on page/style/inventory change
+- [x] Tab icon: editable dropdown of picked items (auto = weapon) instead of free-text
+- [x] "Open wiki page" button (LinkBrowser)
+- [x] Sidebar grid preview: item-icon grid mirroring the exact bank layout (ItemManager AsyncBufferedImage, scaled 26x24, unowned rendered dimmed/disabled). Known limits: icons load async (pop-in), 8 cols squeezed into 225px panel, no quantities shown
+- [x] 7 new tests; 82 total green
