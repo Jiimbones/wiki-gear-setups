@@ -47,7 +47,7 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] `WikiGearSetupsPanel`: search → results → setup combo → preview (green owned / yellow alt / red goal / gray empty+unrecognized, summary counts, "open your bank" hint) → import. Threading: OkHttp async → parse off-EDT → ownership on client thread → UI on EDT
 - [x] NavigationButton + generated 16x16 tag icon (`resources/com/wikigearsetups/icon.png`)
 - [x] Removed unused maxAlternativesPerSlot config (hub-review noise)
-- [~] Runtime verification: dev client smoke (plugin loads, panel works at login screen); full import flow needs a logged-in account — user step
+- [x] Runtime verification 2026-07-19: live Jagex account in dev client (credentials via `--insecure-write-credentials` flow, RuneLite.exe at G:\Runelite\RuneLite). Bank snapshot 883 items; imports verified on ToA, Hespori, Vorkath, GotR, Duke Sucellus, Zulrah ×3 styles; re-import overwrite exercised. No plugin errors.
 - [ ] README screenshots + hub submission (fork runelite/plugin-hub, add manifest; icon.png for listing)
 
 ## v1.1 (out of scope for v1)
