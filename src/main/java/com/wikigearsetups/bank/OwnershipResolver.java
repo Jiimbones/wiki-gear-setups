@@ -2,6 +2,7 @@ package com.wikigearsetups.bank;
 
 import com.wikigearsetups.WikiGearSetupsConfig.MissingGearBehavior;
 import com.wikigearsetups.items.ItemResolver;
+import com.wikigearsetups.items.ItemSets;
 import com.wikigearsetups.items.ResolvedItem;
 import com.wikigearsetups.wiki.EquipSlot;
 import com.wikigearsetups.wiki.GearSetup;
@@ -48,6 +49,10 @@ public class OwnershipResolver
 			SlotPick pick = null;
 			RankedItem bestResolvable = null;
 			ResolvedItem bestResolved = null;
+			// tracked ignoring the set gate, so a slot whose every alternative
+			// needs an unowned set still shows the top piece as a goal
+			RankedItem bestAnyResolvable = null;
+			ResolvedItem bestAnyResolved = null;
 
 			for (int i = 0; i < alternatives.size(); i++)
 			{
@@ -60,6 +65,15 @@ public class OwnershipResolver
 				if (!resolved.isPresent())
 				{
 					unresolved.computeIfAbsent(slot, k -> new ArrayList<>()).add(candidate.getName());
+					continue;
+				}
+				if (bestAnyResolvable == null)
+				{
+					bestAnyResolvable = candidate;
+					bestAnyResolved = resolved.get();
+				}
+				if (!setSatisfied(candidate, ownedIds))
+				{
 					continue;
 				}
 				if (bestResolvable == null)
@@ -76,6 +90,11 @@ public class OwnershipResolver
 				}
 			}
 
+			if (bestResolvable == null)
+			{
+				bestResolvable = bestAnyResolvable;
+				bestResolved = bestAnyResolved;
+			}
 			if (pick != null)
 			{
 				picks.add(pick);
@@ -91,6 +110,47 @@ public class OwnershipResolver
 		}
 
 		return new SetupResolution(setup, picks, unresolved, emptySlots);
+	}
+
+	/**
+	 * Set pieces (void, blood moon, crystal armour…) are only recommended
+	 * because of their set bonus — "always" pieces unconditionally, others
+	 * only when the wiki footnote flags the recommendation as full-set. When
+	 * the player can't complete the set (or lacks the paired weapon), the
+	 * piece is skipped so the next best alternative wins instead.
+	 */
+	private boolean setSatisfied(RankedItem item, Set<Integer> ownedIds)
+	{
+		ItemSets.Requirement requirement = ItemSets.requirementFor(item.getName());
+		if (requirement == null)
+		{
+			return true;
+		}
+		if (!requirement.isAlways() && !ItemSets.setConditionalNote(item.getNote()))
+		{
+			return true;
+		}
+		for (List<String> group : requirement.getOtherPieces())
+		{
+			if (!anyOwned(group, ownedIds))
+			{
+				return false;
+			}
+		}
+		return requirement.getWeapons().isEmpty() || anyOwned(requirement.getWeapons(), ownedIds);
+	}
+
+	private boolean anyOwned(List<String> names, Set<Integer> ownedIds)
+	{
+		for (String name : names)
+		{
+			Optional<ResolvedItem> resolved = itemResolver.resolve(name);
+			if (resolved.isPresent() && firstOwned(resolved.get(), ownedIds) != null)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -138,6 +198,10 @@ public class OwnershipResolver
 			for (RankedItem candidate : entry.getValue())
 			{
 				if (!assumeSlayerTask && isSlayerTaskConditional(candidate))
+				{
+					continue;
+				}
+				if (!setSatisfied(candidate, ownedIds))
 				{
 					continue;
 				}

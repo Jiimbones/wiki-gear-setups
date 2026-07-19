@@ -98,4 +98,11 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Normalize kills space-before-paren both sides ("Salve amulet(i)" == "Salve amulet (i)") — whole-class fix for game/wiki naming divergence
 - [x] Upgrade chains: blowpipe (empty/Blazing), assembler lineage (accumulator→assembler→masori/Dizana's quiver tiers, transitive), tridents ↔ uncharged names, toxic staff, black mask→slayer helm (tier-safe), void→elite, salve amulet tiers; trouver "(l)" direct-name lookup fixed for normalize
 - [x] 5 new tests; 101 total green
+- [x] UI fixes after screenshots: SlimScrollBarUI (8px, no arrows), Scrollable viewport-width wrapper (combo clipping), FlatTextField search+tag with forced white inner text, rounded ✕ clear button, DarkListRenderer for list/combo popups
+
+## Set-bonus gating (2026-07-20)
+- [x] `ItemSets`: piece → requirement (any-of groups per other slot + optional paired weapons). always-gated: void (worthless setless), crystal helm/body/legs (need bowfa/crystal bow). note-gated (footnote contains "full"/"complete"+"set"): barrows ×6, justiciar, obsidian, moon sets ×3 (armour + paired weapon both directions)
+- [x] OwnershipResolver.setSatisfied: gated candidate skipped → next-bis alternative wins (Amoxliatl blood moon helm case); per-recommendation via note so rank-3 standalone Dual macuahuitl stays ungated while rank-2 flagged one is gated; extras gated too
+- [x] Fully-gated slot + SHOW → top piece still shown as goal (bestAnyResolvable fallback)
+- [x] 6 new tests; 107 total green
 - [ ] User visual verification in dev client

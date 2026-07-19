@@ -48,6 +48,105 @@ public class OwnershipResolverTest
 		return new HashSet<>(Arrays.asList(ids));
 	}
 
+	// set-bonus gating — arbitrary ids, resolution goes through the fake index
+	private static final int BLOOD_MOON_HELM = 29028;
+	private static final int BLOOD_MOON_CHEST = 29031;
+	private static final int BLOOD_MOON_TASSETS = 29034;
+	private static final int DUAL_MACUAHUITL = 20155;
+	private static final int NEITIZNOT_FACEGUARD = 24271;
+	private static final int VOID_MAGE_HELM = 11663;
+	private static final int CRYSTAL_BODY = 23975;
+	private static final int BOWFA = 25865;
+	private static final String FULL_SET_NOTE = "Best used with the full Blood moon armour set and Dual macuahuitl";
+
+	private OwnershipResolver setResolver()
+	{
+		return new OwnershipResolver(new ItemResolver(FakeItemNameIndex.of(
+			BLOOD_MOON_HELM, "Blood moon helm",
+			BLOOD_MOON_CHEST, "Blood moon chestplate",
+			BLOOD_MOON_TASSETS, "Blood moon tassets",
+			DUAL_MACUAHUITL, "Dual macuahuitl",
+			NEITIZNOT_FACEGUARD, "Neitiznot faceguard",
+			VOID_MAGE_HELM, "Void mage helm",
+			CRYSTAL_BODY, "Crystal body",
+			BOWFA, "Bow of faerdhinen")));
+	}
+
+	@Test
+	public void noteFlaggedSetPieceSkippedWithoutRestOfSet()
+	{
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Blood moon helm", 1, FULL_SET_NOTE),
+			new RankedItem("Neitiznot faceguard", 2, null));
+		SetupResolution r = setResolver().resolve(s,
+			owned(BLOOD_MOON_HELM, NEITIZNOT_FACEGUARD), MissingGearBehavior.OMIT, false);
+
+		assertEquals(NEITIZNOT_FACEGUARD, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void noteFlaggedSetPiecePickedWhenSetComplete()
+	{
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Blood moon helm", 1, FULL_SET_NOTE),
+			new RankedItem("Neitiznot faceguard", 2, null));
+		SetupResolution r = setResolver().resolve(s,
+			owned(BLOOD_MOON_HELM, BLOOD_MOON_CHEST, BLOOD_MOON_TASSETS, DUAL_MACUAHUITL, NEITIZNOT_FACEGUARD),
+			MissingGearBehavior.OMIT, false);
+
+		assertEquals(BLOOD_MOON_HELM, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void unflaggedRecommendationOfSetPieceIsNotGated()
+	{
+		// same item recommended standalone (no footnote) — rank 3 Dual macuahuitl case
+		GearSetup s = setup(EquipSlot.WEAPON,
+			new RankedItem("Dual macuahuitl", 1, null));
+		SetupResolution r = setResolver().resolve(s,
+			owned(DUAL_MACUAHUITL), MissingGearBehavior.OMIT, false);
+
+		assertEquals(DUAL_MACUAHUITL, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void voidPieceGatedEvenWithoutNote()
+	{
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Void mage helm", 1, null),
+			new RankedItem("Neitiznot faceguard", 2, null));
+		SetupResolution r = setResolver().resolve(s,
+			owned(VOID_MAGE_HELM, NEITIZNOT_FACEGUARD), MissingGearBehavior.OMIT, false);
+
+		assertEquals(NEITIZNOT_FACEGUARD, r.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void crystalArmourRequiresCrystalBow()
+	{
+		GearSetup s = setup(EquipSlot.BODY,
+			new RankedItem("Crystal body", 1, null));
+		OwnershipResolver r = setResolver();
+
+		assertTrue(r.resolve(s, owned(CRYSTAL_BODY), MissingGearBehavior.OMIT, false)
+			.getPicks().isEmpty());
+		assertEquals(CRYSTAL_BODY, r.resolve(s, owned(CRYSTAL_BODY, BOWFA), MissingGearBehavior.OMIT, false)
+			.getPicks().get(0).getItemId());
+	}
+
+	@Test
+	public void fullyGatedSlotStillShowsTopPieceAsGoal()
+	{
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Blood moon helm", 1, FULL_SET_NOTE));
+		SetupResolution r = setResolver().resolve(s,
+			owned(), MissingGearBehavior.SHOW_BEST_UNOWNED, false);
+
+		assertEquals(1, r.getPicks().size());
+		assertEquals(BLOOD_MOON_HELM, r.getPicks().get(0).getItemId());
+		assertFalse(r.getPicks().get(0).isOwned());
+	}
+
 	@Test
 	public void twoHandedWeaponDropsShieldPick()
 	{
