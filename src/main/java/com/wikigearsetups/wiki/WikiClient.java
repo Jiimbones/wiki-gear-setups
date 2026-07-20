@@ -44,7 +44,9 @@ public class WikiClient
 	@Inject
 	public WikiClient(OkHttpClient http, Gson gson)
 	{
-		this.http = http;
+		// the injected client has no call timeout; a hung wiki should fail
+		// fast enough for the panel to show something useful
+		this.http = http.newBuilder().callTimeout(Duration.ofSeconds(15)).build();
 		this.gson = gson;
 	}
 
@@ -69,6 +71,20 @@ public class WikiClient
 		{
 			String wikitext = extractWikitext(json);
 			pageCache.put(title, new CachedPage(wikitext, Instant.now()));
+			return wikitext;
+		}).handle((wikitext, err) ->
+		{
+			// wiki down: a stale cached copy beats an error
+			if (err != null)
+			{
+				CachedPage stale = pageCache.get(title);
+				if (stale != null)
+				{
+					log.debug("Serving stale wiki page '{}' after fetch failure", title, err);
+					return stale.getWikitext();
+				}
+				throw new java.util.concurrent.CompletionException(err);
+			}
 			return wikitext;
 		});
 	}

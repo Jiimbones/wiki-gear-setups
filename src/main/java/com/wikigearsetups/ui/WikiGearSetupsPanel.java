@@ -92,6 +92,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final int CELL_H = 24;
 	private static final String DEVELOPER_NAME = "Jiimbones";
 	private static final String DONATION_URL = "https://www.paypal.com/ncp/payment/FQTFP8N8H7P2W";
+	private static final String BUG_REPORT_URL = "https://github.com/Jiimbones/wiki-gear-setups/issues/new";
 
 	private final WikiClient wikiClient;
 	private final GearSetupParser parser = new GearSetupParser();
@@ -426,12 +427,42 @@ public class WikiGearSetupsPanel extends PluginPanel
 		dev.setFont(FontManager.getRunescapeSmallFont());
 		dev.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
 		footer.add(dev, BorderLayout.WEST);
+		JButton bugReport = new RoundedButton("Report bug");
+		bugReport.setFont(FontManager.getRunescapeSmallFont());
+		bugReport.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+		bugReport.setToolTipText("Open a GitHub issue — include the page name and a screenshot");
+		bugReport.addActionListener(e -> LinkBrowser.browse(bugReportUrl()));
 		JButton donate = new RoundedButton("Donate ♥");
 		donate.setFont(FontManager.getRunescapeSmallFont());
-		donate.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
+		donate.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
 		donate.addActionListener(e -> LinkBrowser.browse(DONATION_URL));
-		footer.add(donate, BorderLayout.EAST);
+		JPanel footerButtons = new JPanel();
+		footerButtons.setOpaque(false);
+		footerButtons.setLayout(new BoxLayout(footerButtons, BoxLayout.X_AXIS));
+		footerButtons.add(bugReport);
+		footerButtons.add(Box.createHorizontalStrut(4));
+		footerButtons.add(donate);
+		footer.add(footerButtons, BorderLayout.EAST);
 		return footer;
+	}
+
+	/** Prefills the issue with the page being viewed so reports are actionable. */
+	private String bugReportUrl()
+	{
+		if (currentPageTitle == null)
+		{
+			return BUG_REPORT_URL;
+		}
+		try
+		{
+			return BUG_REPORT_URL + "?title=" + URLEncoder.encode("[" + currentPageTitle + "] ", "UTF-8")
+				+ "&body=" + URLEncoder.encode("Wiki page: " + currentPageTitle
+					+ "\nWhat happened:\n\nWhat I expected:\n", "UTF-8");
+		}
+		catch (UnsupportedEncodingException e)
+		{
+			return BUG_REPORT_URL;
+		}
 	}
 
 	/** A pickable tab icon: item id + display name, rendered with its sprite. */
@@ -1192,6 +1223,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 		while (t.getCause() != null && t.getCause() != t)
 		{
 			t = t.getCause();
+		}
+		if (t instanceof java.net.UnknownHostException || t instanceof java.net.ConnectException
+			|| t instanceof java.net.SocketTimeoutException || t instanceof java.io.InterruptedIOException)
+		{
+			return "Can't reach the OSRS Wiki — check your connection and try again";
 		}
 		return t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
 	}
