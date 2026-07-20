@@ -126,6 +126,8 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] 10 new/updated tests; 119 total green
 - [x] Personalization restored in example mode: `ExampleGearEnricher` — each concrete example item anchors into the page's ranked ladder for that slot (anchor first: owned→placed, unowned→goal; ladder = owned fallback, style-correct implicitly). Source combo ("Example setups"/"Gear by style") shown when a page has both formats; tabber pages (Zulrah/Vorkath) unaffected (classic only)
 - [x] 4 new tests; 123 total green
+- [x] Adaptive inventory (all modes): unowned inventory item → (1) gear-ladder fallback when the item anchors into any ranked slot list (switch items, style-correct), (2) `ConsumableGroups` class substitution (food tiers, prayer restores), else missing/goal as before. Divine potions satisfy base potion recs (one-directional, resolver-level)
+- [x] 4 new tests; 127 total green
 - [ ] User visual verification in dev client
 
 ## Next

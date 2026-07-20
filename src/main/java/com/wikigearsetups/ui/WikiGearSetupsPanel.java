@@ -970,7 +970,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 			InventoryResolution invResolution = selectedInventory == null
 				? null
-				: inventoryResolver.resolve(selectedInventory, owned, config.missingGearBehavior());
+				: inventoryResolver.resolve(selectedInventory, owned, config.missingGearBehavior(), pageSetups);
 
 			List<InventoryPick> invPicks = invResolution == null
 				? Collections.emptyList() : invResolution.getPicks();

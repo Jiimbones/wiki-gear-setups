@@ -1,11 +1,16 @@
 package com.wikigearsetups.bank;
 
 import com.wikigearsetups.WikiGearSetupsConfig.MissingGearBehavior;
+import com.wikigearsetups.items.ConsumableGroups;
+import com.wikigearsetups.items.ItemNames;
 import com.wikigearsetups.items.ItemResolver;
 import com.wikigearsetups.items.PlaceholderItems;
 import com.wikigearsetups.items.ResolvedItem;
+import com.wikigearsetups.wiki.GearSetup;
 import com.wikigearsetups.wiki.InventorySetup;
+import com.wikigearsetups.wiki.RankedItem;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +38,17 @@ public class InventoryResolver
 
 	public InventoryResolution resolve(InventorySetup setup, Set<Integer> ownedIds, MissingGearBehavior missingBehavior)
 	{
+		return resolve(setup, ownedIds, missingBehavior, Collections.emptyList());
+	}
+
+	/**
+	 * {@code rankedSetups} are the page's gear ladders — an unowned switch
+	 * item in the inventory (blowpipe, trident) falls back to the best owned
+	 * alternative from the ladder that contains it, just like worn gear.
+	 */
+	public InventoryResolution resolve(InventorySetup setup, Set<Integer> ownedIds,
+		MissingGearBehavior missingBehavior, List<GearSetup> rankedSetups)
+	{
 		List<InventoryPick> picks = new ArrayList<>();
 		List<InventoryPick> runePicks = new ArrayList<>();
 		Set<String> unresolved = new LinkedHashSet<>();
@@ -42,12 +58,14 @@ public class InventoryResolver
 		List<String> slots = setup.getSlots();
 		for (int i = 0; i < slots.size(); i++)
 		{
-			resolveOne(slots.get(i), i, ownedIds, missingBehavior, picks, unresolved, missingNames, missing);
+			resolveOne(slots.get(i), i, ownedIds, missingBehavior, rankedSetups,
+				picks, unresolved, missingNames, missing);
 		}
 		List<String> runes = setup.getRunes();
 		for (int i = 0; i < runes.size(); i++)
 		{
-			resolveOne(runes.get(i), i, ownedIds, missingBehavior, runePicks, unresolved, missingNames, missing);
+			resolveOne(runes.get(i), i, ownedIds, missingBehavior, Collections.emptyList(),
+				runePicks, unresolved, missingNames, missing);
 		}
 
 		return new InventoryResolution(setup, picks, runePicks,
@@ -55,7 +73,8 @@ public class InventoryResolver
 	}
 
 	private void resolveOne(String name, int slot, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
-		List<InventoryPick> out, Set<String> unresolved, Set<String> missingNames, int[] missing)
+		List<GearSetup> rankedSetups, List<InventoryPick> out, Set<String> unresolved,
+		Set<String> missingNames, int[] missing)
 	{
 		if (name.isEmpty())
 		{
@@ -72,16 +91,76 @@ public class InventoryResolver
 		if (ownedId != null)
 		{
 			out.add(new InventoryPick(slot, ownedId, true));
+			return;
 		}
-		else
+
+		Integer substitute = substituteFor(name, ownedIds, rankedSetups);
+		if (substitute != null)
 		{
-			missing[0]++;
-			missingNames.add(name);
-			if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED)
+			out.add(new InventoryPick(slot, substitute, true));
+			return;
+		}
+
+		missing[0]++;
+		missingNames.add(name);
+		if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED)
+		{
+			out.add(new InventoryPick(slot, resolved.get().getPrimaryId(), false));
+		}
+	}
+
+	/**
+	 * Owned stand-in for an unowned inventory item: first the gear ladder
+	 * containing it (switch items, style-correct by construction), then its
+	 * consumable class (best owned food for an unowned shark).
+	 */
+	private Integer substituteFor(String name, Set<Integer> ownedIds, List<GearSetup> rankedSetups)
+	{
+		String normalized = ItemNames.normalize(name);
+		for (GearSetup setup : rankedSetups)
+		{
+			for (List<RankedItem> ladder : setup.getSlots().values())
 			{
-				out.add(new InventoryPick(slot, resolved.get().getPrimaryId(), false));
+				boolean anchored = false;
+				for (RankedItem item : ladder)
+				{
+					if (ItemNames.normalize(item.getName()).equals(normalized))
+					{
+						anchored = true;
+						break;
+					}
+				}
+				if (!anchored)
+				{
+					continue;
+				}
+				for (RankedItem item : ladder)
+				{
+					Optional<ResolvedItem> resolved = itemResolver.resolve(item.getName());
+					if (resolved.isPresent())
+					{
+						Integer owned = firstOwned(resolved.get(), ownedIds);
+						if (owned != null)
+						{
+							return owned;
+						}
+					}
+				}
 			}
 		}
+		for (String candidate : ConsumableGroups.groupFor(name))
+		{
+			Optional<ResolvedItem> resolved = itemResolver.resolve(candidate);
+			if (resolved.isPresent())
+			{
+				Integer owned = firstOwned(resolved.get(), ownedIds);
+				if (owned != null)
+				{
+					return owned;
+				}
+			}
+		}
+		return null;
 	}
 
 	/**

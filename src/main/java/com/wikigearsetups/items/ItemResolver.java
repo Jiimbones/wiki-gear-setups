@@ -159,6 +159,12 @@ public class ItemResolver
 			resolveExact(upgrade).ifPresent(r -> acceptable.addAll(r.getAcceptableIds()));
 		}
 
+		// a divine potion satisfies its base potion (never the reverse)
+		if (wiki.contains("potion") && !wiki.startsWith("divine "))
+		{
+			resolveExact("divine " + wiki).ifPresent(r -> acceptable.addAll(r.getAcceptableIds()));
+		}
+
 		return Optional.of(new ResolvedItem(wikiName, primary.get(0), acceptable));
 	}
 }

@@ -278,6 +278,23 @@ public class ItemResolverTest
 	}
 
 	@Test
+	public void divinePotionSatisfiesBasePotionButNotReverse()
+	{
+		int superCombat = 12695;
+		int divineSuperCombat = 23685;
+		ItemResolver r = resolver(
+			superCombat, "Super combat potion(4)",
+			divineSuperCombat, "Divine super combat potion(4)");
+
+		assertTrue("divine satisfies base",
+			r.resolve("Super combat potion(4)").orElseThrow(AssertionError::new)
+				.getAcceptableIds().contains(divineSuperCombat));
+		assertFalse("base must not satisfy divine",
+			r.resolve("Divine super combat potion(4)").orElseThrow(AssertionError::new)
+				.getAcceptableIds().contains(superCombat));
+	}
+
+	@Test
 	public void stripChargeDecorations()
 	{
 		assertEquals("black mask (i)", ItemNames.stripChargeDecorations("black mask (10) (i)"));

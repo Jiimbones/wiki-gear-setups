@@ -3,12 +3,17 @@ package com.wikigearsetups.bank;
 import com.wikigearsetups.WikiGearSetupsConfig.MissingGearBehavior;
 import com.wikigearsetups.items.FakeItemNameIndex;
 import com.wikigearsetups.items.ItemResolver;
+import com.wikigearsetups.wiki.EquipSlot;
+import com.wikigearsetups.wiki.GearSetup;
 import com.wikigearsetups.wiki.InventorySetup;
+import com.wikigearsetups.wiki.RankedItem;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -100,6 +105,54 @@ public class InventoryResolverTest
 			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
 		assertEquals(Collections.singletonList("Fancy nonexistent widget"), r.getUnresolvedNames());
 		assertTrue(r.getPicks().isEmpty());
+	}
+
+	@Test
+	public void unownedFoodSubstitutesBestOwnedFromItsClass()
+	{
+		int monkfish = 7946;
+		InventoryResolver r = new InventoryResolver(new ItemResolver(
+			FakeItemNameIndex.of(SHARK, "Shark", monkfish, "Monkfish")));
+
+		InventoryResolution res = r.resolve(setup("Shark"),
+			Collections.singleton(monkfish), MissingGearBehavior.OMIT);
+
+		assertEquals(1, res.getPicks().size());
+		assertEquals(monkfish, res.getPicks().get(0).getItemId());
+		assertTrue(res.getPicks().get(0).isOwned());
+		assertEquals(0, res.getMissingCount());
+	}
+
+	@Test
+	public void unownedSwitchItemFallsBackThroughGearLadder()
+	{
+		int blowpipe = 12926;
+		int rcb = 9185;
+		InventoryResolver r = new InventoryResolver(new ItemResolver(
+			FakeItemNameIndex.of(blowpipe, "Toxic blowpipe", rcb, "Rune crossbow")));
+
+		Map<EquipSlot, List<RankedItem>> slots = new EnumMap<>(EquipSlot.class);
+		slots.put(EquipSlot.WEAPON, Arrays.asList(
+			new RankedItem("Toxic blowpipe", 1, null),
+			new RankedItem("Rune crossbow", 2, null)));
+		GearSetup ladder = new GearSetup("Ranged", slots);
+
+		InventoryResolution res = r.resolve(setup("Toxic blowpipe"),
+			Collections.singleton(rcb), MissingGearBehavior.OMIT,
+			Collections.singletonList(ladder));
+
+		assertEquals(rcb, res.getPicks().get(0).getItemId());
+		assertTrue(res.getPicks().get(0).isOwned());
+	}
+
+	@Test
+	public void nothingOwnedInClassStillGoesMissing()
+	{
+		InventoryResolution r = resolver.resolve(setup("Shark"),
+			Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED);
+		assertEquals(1, r.getMissingCount());
+		assertFalse(r.getPicks().get(0).isOwned());
+		assertEquals(SHARK, r.getPicks().get(0).getItemId());
 	}
 
 	@Test

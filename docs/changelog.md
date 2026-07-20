@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-20: Adaptive inventory — unowned switch items fall back through gear ladders, unowned consumables substitute the best owned of their class (ConsumableGroups); divine potions satisfy base potion recs; applies in example and classic modes; 127 tests green.
 - 2026-07-20: Example-mode personalization — unowned example items fall back through the page's ranked ladders (ExampleGearEnricher); source selector (Example setups / Gear by style) on pages with both formats; 123 tests green.
 - 2026-07-20: Raid example setups — ExampleSetupParser reads the raid pages' complete gear+inventory columns (ToA/CoX tier columns, ToB guide mode/tier/role hierarchy) into cascading dropdowns with paired inventory (no separate inv choice); Guide: page discovery; scrapped the shelved best-per-style idea; 119 tests green.
 - 2026-07-20: Raid loadouts reverted after user testing — shelved on branch `shelf/raid-loadouts` for a future update.
