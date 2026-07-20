@@ -36,24 +36,26 @@ public class InventoryResolver
 		List<InventoryPick> picks = new ArrayList<>();
 		List<InventoryPick> runePicks = new ArrayList<>();
 		Set<String> unresolved = new LinkedHashSet<>();
+		Set<String> missingNames = new LinkedHashSet<>();
 		int[] missing = {0};
 
 		List<String> slots = setup.getSlots();
 		for (int i = 0; i < slots.size(); i++)
 		{
-			resolveOne(slots.get(i), i, ownedIds, missingBehavior, picks, unresolved, missing);
+			resolveOne(slots.get(i), i, ownedIds, missingBehavior, picks, unresolved, missingNames, missing);
 		}
 		List<String> runes = setup.getRunes();
 		for (int i = 0; i < runes.size(); i++)
 		{
-			resolveOne(runes.get(i), i, ownedIds, missingBehavior, runePicks, unresolved, missing);
+			resolveOne(runes.get(i), i, ownedIds, missingBehavior, runePicks, unresolved, missingNames, missing);
 		}
 
-		return new InventoryResolution(setup, picks, runePicks, new ArrayList<>(unresolved), missing[0]);
+		return new InventoryResolution(setup, picks, runePicks,
+			new ArrayList<>(unresolved), new ArrayList<>(missingNames), missing[0]);
 	}
 
 	private void resolveOne(String name, int slot, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
-		List<InventoryPick> out, Set<String> unresolved, int[] missing)
+		List<InventoryPick> out, Set<String> unresolved, Set<String> missingNames, int[] missing)
 	{
 		if (name.isEmpty())
 		{
@@ -62,7 +64,7 @@ public class InventoryResolver
 		Optional<ResolvedItem> resolved = itemResolver.resolve(name);
 		if (!resolved.isPresent())
 		{
-			resolvePlaceholder(name, slot, ownedIds, missingBehavior, out, unresolved, missing);
+			resolvePlaceholder(name, slot, ownedIds, missingBehavior, out, unresolved, missingNames, missing);
 			return;
 		}
 
@@ -74,6 +76,7 @@ public class InventoryResolver
 		else
 		{
 			missing[0]++;
+			missingNames.add(name);
 			if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED)
 			{
 				out.add(new InventoryPick(slot, resolved.get().getPrimaryId(), false));
@@ -87,7 +90,8 @@ public class InventoryResolver
 	 * item under SHOW_BEST_UNOWNED. Unknown placeholders stay unresolved.
 	 */
 	private void resolvePlaceholder(String name, int slot, Set<Integer> ownedIds,
-		MissingGearBehavior missingBehavior, List<InventoryPick> out, Set<String> unresolved, int[] missing)
+		MissingGearBehavior missingBehavior, List<InventoryPick> out, Set<String> unresolved,
+		Set<String> missingNames, int[] missing)
 	{
 		List<String> candidates = PlaceholderItems.candidatesFor(name);
 		if (candidates.isEmpty())
@@ -122,6 +126,7 @@ public class InventoryResolver
 			return;
 		}
 		missing[0]++;
+		missingNames.add(name);
 		if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED)
 		{
 			out.add(new InventoryPick(slot, firstResolvable.getPrimaryId(), false));

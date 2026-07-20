@@ -91,8 +91,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final int CELL_W = 26;
 	private static final int CELL_H = 24;
 	private static final String DEVELOPER_NAME = "Jiimbones";
-	// placeholder until a real donation link exists
-	private static final String DONATION_URL = "https://example.com/donate";
+	private static final String DONATION_URL = "https://www.paypal.com/ncp/payment/FQTFP8N8H7P2W";
 
 	private final WikiClient wikiClient;
 	private final GearSetupParser parser = new GearSetupParser();
@@ -268,17 +267,12 @@ public class WikiGearSetupsPanel extends PluginPanel
 		flow.add(gridPanel);
 		flow.add(Box.createVerticalStrut(8));
 
-		previewPanel.setLayout(new BoxLayout(previewPanel, BoxLayout.Y_AXIS));
-		previewPanel.setOpaque(false);
-		previewPanel.setAlignmentX(LEFT_ALIGNMENT);
-		flow.add(previewPanel);
-		flow.add(Box.createVerticalStrut(8));
-
+		// import controls sit directly under the grid; the detail list follows
 		tagNameField.getDocument().addDocumentListener(userEditListener(
 			() -> tagNameField.getTextField().hasFocus(), () -> userEditedTag = true));
 		styleFlatField(tagNameField);
 		tagNameField.setPreferredSize(new Dimension(0, 26));
-		flow.add(labeledRow("Tag name", tagNameField));
+		flow.add(labeledRow("Name", tagNameField));
 		flow.add(Box.createVerticalStrut(4));
 		iconCombo.setRenderer(new IconOptionRenderer());
 		iconCombo.setMaximumRowCount(12);
@@ -290,7 +284,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 				userEditedIcon = true;
 			}
 		});
-		flow.add(labeledRow("Tab icon", iconCombo));
+		flow.add(labeledRow("Icon", iconCombo));
 		flow.add(Box.createVerticalStrut(8));
 		importButton.setEnabled(false);
 		importButton.setToolTipText("Creates or updates a bank tag tab with this layout");
@@ -299,6 +293,12 @@ public class WikiGearSetupsPanel extends PluginPanel
 		importButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, importButton.getPreferredSize().height));
 		importButton.addActionListener(e -> doImport());
 		flow.add(importButton);
+		flow.add(Box.createVerticalStrut(8));
+
+		previewPanel.setLayout(new BoxLayout(previewPanel, BoxLayout.Y_AXIS));
+		previewPanel.setOpaque(false);
+		previewPanel.setAlignmentX(LEFT_ALIGNMENT);
+		flow.add(previewPanel);
 
 		// Scrollable wrapper: tracks the viewport width so nothing can push
 		// past the panel edge, while keeping natural height for scrolling
@@ -865,6 +865,14 @@ public class WikiGearSetupsPanel extends PluginPanel
 					runeNames.add(rn != null ? rn : "?");
 				}
 				addRow("Runes: " + String.join(", ", runeNames), OWNED, false);
+			}
+			if (!invResolution.getMissingNames().isEmpty())
+			{
+				addRow("— Missing items —", ColorScheme.LIGHT_GRAY_COLOR, false);
+				for (String missingName : invResolution.getMissingNames())
+				{
+					addRow(missingName, MISSING, false);
+				}
 			}
 			if (!invResolution.getUnresolvedNames().isEmpty())
 			{

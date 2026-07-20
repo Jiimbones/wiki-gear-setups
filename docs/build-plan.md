@@ -107,4 +107,11 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] 6 new tests; 107 total green
 - [x] User feedback: still saw blood moon helm (owns the set) → gate upgraded from owned to WORN-in-layout: PieceGroup carries its EquipSlot; requirement met per group iff piece is the slot's owned pick, or slot has no owned pick and piece is owned; fixpoint re-resolution with per-slot exclusions; parser test for named-efn note ({{efn|...|name=X}})
 - [x] 3 new tests; 110 total green
+
+## Feedback round 6 (2026-07-20)
+- [x] Trouver parchment fix: "+{{plinkp|X}}" companion notation skipped in gear cells (precededByPlus) + "Trouver parchment" name-ignored; Fighter torso resolves normally, fallthrough to next rank works (Calvar'ion)
+- [x] Ring of suffering upgrade chain: (ri) satisfies plain/(r)/(i); plain never satisfies (i)
+- [x] InventoryResolution.missingNames (deduped wiki names) — panel shows "— Missing items —" red list separate from inventory summary
+- [x] Panel: Name/Icon/Import moved directly under the grid (labels shortened); detail list after; donation link → real PayPal URL
+- [x] 3 new tests; 113 total green
 - [ ] User visual verification in dev client

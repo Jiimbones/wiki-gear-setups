@@ -40,6 +40,21 @@ public class GearSetupParserTest
 	}
 
 	@Test
+	public void trouverParchmentCompanionIsNotAnAlternative()
+	{
+		// exact body1 syntax from Calvar'ion/Strategies: the "+{{plinkp|...}}"
+		// marks a companion item to lock the gear, not wearable equipment
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Melee"
+			+ "|body1={{plink|Fighter torso}}{{efn|name=break}}+{{plinkp|Trouver parchment}}{{efn|ITEM WILL BE LOST|name=trouver}}"
+			+ "|body2={{plink|Black d'hide body}}}}");
+
+		List<RankedItem> body = setups.get(0).getSlots().get(EquipSlot.BODY);
+		assertEquals(2, body.size());
+		assertEquals("Fighter torso", body.get(0).getName());
+		assertEquals("Black d'hide body", body.get(1).getName());
+	}
+
+	@Test
 	public void zulrahParsesAllTabberSetups() throws IOException
 	{
 		List<GearSetup> setups = parser.parse(fixture("zulrah-strategies"));

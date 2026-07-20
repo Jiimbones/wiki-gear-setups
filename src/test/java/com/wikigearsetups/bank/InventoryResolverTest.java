@@ -103,6 +103,16 @@ public class InventoryResolverTest
 	}
 
 	@Test
+	public void missingItemsAreNamed()
+	{
+		InventoryResolution r = resolver.resolve(setup("Shark", "Cooked karambwan", "Shark"),
+			Collections.singleton(KARAMBWAN), MissingGearBehavior.SHOW_BEST_UNOWNED);
+
+		assertEquals(Collections.singletonList("Shark"), r.getMissingNames());
+		assertEquals(2, r.getMissingCount());
+	}
+
+	@Test
 	public void runesResolveIntoRunePicks()
 	{
 		int fireRune = 554;

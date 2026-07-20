@@ -256,6 +256,28 @@ public class ItemResolverTest
 	}
 
 	@Test
+	public void ringOfSufferingRecoilImbuedSatisfiesAllLesserForms()
+	{
+		int plain = 19550;
+		int imbued = 19710;
+		int recoilImbued = 20655;
+		ItemResolver r = resolver(
+			plain, "Ring of suffering",
+			imbued, "Ring of suffering (i)",
+			recoilImbued, "Ring of suffering (ri)");
+
+		assertTrue("(ri) satisfies plain",
+			r.resolve("Ring of suffering").orElseThrow(AssertionError::new)
+				.getAcceptableIds().contains(recoilImbued));
+		assertTrue("(ri) satisfies (i)",
+			r.resolve("Ring of suffering (i)").orElseThrow(AssertionError::new)
+				.getAcceptableIds().contains(recoilImbued));
+		assertFalse("plain must not satisfy (i)",
+			r.resolve("Ring of suffering (i)").orElseThrow(AssertionError::new)
+				.getAcceptableIds().contains(plain));
+	}
+
+	@Test
 	public void stripChargeDecorations()
 	{
 		assertEquals("black mask (i)", ItemNames.stripChargeDecorations("black mask (10) (i)"));

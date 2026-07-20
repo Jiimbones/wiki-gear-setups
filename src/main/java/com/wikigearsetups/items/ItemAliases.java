@@ -61,6 +61,11 @@ public final class ItemAliases
 		upgrade("Salve amulet", "Salve amulet (e)", "Salve amulet (i)", "Salve amulet (ei)");
 		upgrade("Salve amulet (e)", "Salve amulet (ei)");
 		upgrade("Salve amulet (i)", "Salve amulet (ei)");
+		// (r)/(i)/(ri) suffixes defeat the startsWith rule — "(ri)" doesn't
+		// extend "(i)" textually even though it's the same ring, imbued+recoil
+		upgrade("Ring of suffering", "Ring of suffering (r)", "Ring of suffering (i)", "Ring of suffering (ri)");
+		upgrade("Ring of suffering (i)", "Ring of suffering (ri)");
+		upgrade("Ring of suffering (r)", "Ring of suffering (ri)");
 	}
 
 	private static void generic(String name, String... concrete)

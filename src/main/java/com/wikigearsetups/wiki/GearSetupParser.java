@@ -165,7 +165,10 @@ public class GearSetupParser
 				if (item != null)
 				{
 					item = stripMarkup(item);
-					if (!item.isEmpty() && !item.equalsIgnoreCase("n/a") && !item.equalsIgnoreCase("none"))
+					// "+{{plinkp|Trouver parchment}}" marks a companion item
+					// (lock the gear at Perdu), not a wearable alternative
+					if (!item.isEmpty() && !item.equalsIgnoreCase("n/a") && !item.equalsIgnoreCase("none")
+						&& !item.equalsIgnoreCase("trouver parchment") && !precededByPlus(v, i))
 					{
 						items.add(new RankedItem(item, rank, null));
 					}
@@ -188,6 +191,19 @@ public class GearSetupParser
 			i = end;
 		}
 		return items;
+	}
+
+	private static boolean precededByPlus(String s, int templateStart)
+	{
+		for (int j = templateStart - 1; j >= 0; j--)
+		{
+			char c = s.charAt(j);
+			if (!Character.isWhitespace(c))
+			{
+				return c == '+';
+			}
+		}
+		return false;
 	}
 
 	/**
