@@ -114,4 +114,11 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] InventoryResolution.missingNames (deduped wiki names) — panel shows "— Missing items —" red list separate from inventory summary
 - [x] Panel: Name/Icon/Import moved directly under the grid (labels shortened); detail list after; donation link → real PayPal URL
 - [x] 3 new tests; 113 total green
-- [ ] User visual verification in dev client
+- [x] Report-bug button (GitHub issue, prefilled page title/body), wiki resilience (15s timeout, stale-cache fallback, friendly errors), support= property
+- [x] User verified rounds 5-6 in dev client
+
+## Shelved
+- Raid loadouts ("best per style" one-tab option): built, reverted after user testing. Full implementation preserved on branch `shelf/raid-loadouts` (commit ccf4638) for a future update.
+
+## Next
+- [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)
