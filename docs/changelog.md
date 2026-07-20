@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-20: Raid example setups — ExampleSetupParser reads the raid pages' complete gear+inventory columns (ToA/CoX tier columns, ToB guide mode/tier/role hierarchy) into cascading dropdowns with paired inventory (no separate inv choice); Guide: page discovery; scrapped the shelved best-per-style idea; 119 tests green.
 - 2026-07-20: Raid loadouts reverted after user testing — shelved on branch `shelf/raid-loadouts` for a future update.
 - 2026-07-20: Report-bug button (GitHub issue prefilled with page name), wiki downtime resilience (15s call timeout, stale-cache fallback, friendly connection errors), support URL in plugin properties; 113 tests green.
 - 2026-07-20: Round 6 — trouver parchment companions ("+{{plinkp|...}}") no longer parsed as gear (Calvar'ion), ring of suffering (r)/(ri) upgrades, named missing inventory items in red, Name/Icon/Import moved under the grid, real PayPal donation link; 113 tests green.

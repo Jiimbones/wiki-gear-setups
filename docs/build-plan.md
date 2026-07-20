@@ -117,8 +117,14 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Report-bug button (GitHub issue, prefilled page title/body), wiki resilience (15s timeout, stale-cache fallback, friendly errors), support= property
 - [x] User verified rounds 5-6 in dev client
 
-## Shelved
-- Raid loadouts ("best per style" one-tab option): built, reverted after user testing. Full implementation preserved on branch `shelf/raid-loadouts` (commit ccf4638) for a future update.
+## Raid example setups (2026-07-20)
+- [x] Scrapped the shelved best-per-style idea (branch deleted) in favour of the wiki's own example loadouts
+- [x] `ExampleSetupParser`: wikitable idiom (! header columns; parallel {{Equipment}}/{{Inventory}}/{{Rune pouch}} rows; positional column pairing; template-depth-aware line scan — bare "|" cells with next-line templates; multi-line headers; |+ captions skipped). Section headings (h2/h3) → setup path
+- [x] `ExampleSetup` model (path, label, gear, paired inventory); real fixtures toa-strategies + tob-setups-guide
+- [x] Panel example mode: cascading Mode → Tier → Label combos, shown only when the page has that level (ToA/CoX = single dropdown, ToB = all three); paired inventory imported automatically, inventory combo hidden; tag name from cascade with page words scrubbed
+- [x] PageDiscovery probes "Guide:<base> setups" first (ToB); displayTitle strips Guide:/" setups"
+- [x] 10 new/updated tests; 119 total green
+- [ ] User visual verification in dev client
 
 ## Next
 - [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)

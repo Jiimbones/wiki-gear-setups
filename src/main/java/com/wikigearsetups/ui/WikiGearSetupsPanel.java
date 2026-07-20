@@ -13,6 +13,8 @@ import com.wikigearsetups.layout.BankTagImporter;
 import com.wikigearsetups.layout.LayoutBuilder;
 import com.wikigearsetups.layout.TagNames;
 import com.wikigearsetups.wiki.EquipSlot;
+import com.wikigearsetups.wiki.ExampleSetup;
+import com.wikigearsetups.wiki.ExampleSetupParser;
 import com.wikigearsetups.wiki.GearSetup;
 import com.wikigearsetups.wiki.GearSetupParser;
 import com.wikigearsetups.wiki.InventoryParser;
@@ -31,6 +33,7 @@ import java.awt.image.BufferedImage;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -97,6 +100,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final WikiClient wikiClient;
 	private final GearSetupParser parser = new GearSetupParser();
 	private final InventoryParser inventoryParser = new InventoryParser();
+	private final ExampleSetupParser exampleSetupParser = new ExampleSetupParser();
 	private final OwnershipResolver ownershipResolver;
 	private final InventoryResolver inventoryResolver;
 	private final BankStateCache bankStateCache;
@@ -111,6 +115,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final DefaultListModel<String> resultsModel = new DefaultListModel<>();
 	private final JList<String> resultsList = new JList<>(resultsModel);
 	private final JButton wikiLinkButton = new RoundedButton("Open wiki page");
+	private final JComboBox<String> modeCombo = new JComboBox<>();
+	private final JComboBox<String> tierCombo = new JComboBox<>();
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
 	private final JPanel gridPanel = new JPanel();
@@ -122,6 +128,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private List<SearchResult> searchResults = Collections.emptyList();
 	private String currentPageTitle;
 	private List<GearSetup> currentSetups;
+	// non-empty = example mode: complete gear+inventory columns from the page,
+	// chosen through the mode/tier/label cascade instead of the classic combos
+	private List<ExampleSetup> currentExamples = Collections.emptyList();
 	private List<InventorySetup> currentInventories = Collections.emptyList();
 	private List<SetupResolution> currentResolutions;
 	private InventoryResolution currentInventoryResolution;
@@ -226,6 +235,45 @@ public class WikiGearSetupsPanel extends PluginPanel
 		wikiLinkButton.addActionListener(e -> openWikiPage());
 		flow.add(wikiLinkButton);
 		flow.add(Box.createVerticalStrut(6));
+
+		modeCombo.setAlignmentX(LEFT_ALIGNMENT);
+		modeCombo.setToolTipText("Mode section on the wiki page");
+		styleCombo(modeCombo);
+		modeCombo.addActionListener(e ->
+		{
+			if (!updatingCombos)
+			{
+				userEditedTag = false;
+				userEditedIcon = false;
+				updatingCombos = true;
+				rebuildExampleTiers();
+				rebuildExampleLabels();
+				updatingCombos = false;
+				resolveSelection();
+			}
+		});
+		modeCombo.setVisible(false);
+		flow.add(modeCombo);
+		flow.add(Box.createVerticalStrut(4));
+
+		tierCombo.setAlignmentX(LEFT_ALIGNMENT);
+		tierCombo.setToolTipText("Tier within the selected mode");
+		styleCombo(tierCombo);
+		tierCombo.addActionListener(e ->
+		{
+			if (!updatingCombos)
+			{
+				userEditedTag = false;
+				userEditedIcon = false;
+				updatingCombos = true;
+				rebuildExampleLabels();
+				updatingCombos = false;
+				resolveSelection();
+			}
+		});
+		tierCombo.setVisible(false);
+		flow.add(tierCombo);
+		flow.add(Box.createVerticalStrut(4));
 
 		setupCombo.setAlignmentX(LEFT_ALIGNMENT);
 		setupCombo.setToolTipText("Gear style from the wiki page");
@@ -542,12 +590,23 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}));
 	}
 
-	/** "Zulrah/Strategies" reads better as just "Zulrah". */
+	/** "Zulrah/Strategies" and "Guide:Theatre of Blood setups" read as the base name. */
 	private static String displayTitle(String title)
 	{
-		return title.endsWith("/Strategies")
-			? title.substring(0, title.length() - "/Strategies".length())
-			: title;
+		String t = title;
+		if (t.startsWith("Guide:"))
+		{
+			t = t.substring("Guide:".length());
+		}
+		if (t.endsWith(" setups"))
+		{
+			t = t.substring(0, t.length() - " setups".length());
+		}
+		if (t.endsWith("/Strategies"))
+		{
+			t = t.substring(0, t.length() - "/Strategies".length());
+		}
+		return t;
 	}
 
 	private void openWikiPage()
@@ -593,25 +652,58 @@ public class WikiGearSetupsPanel extends PluginPanel
 				tryCandidates(candidates, index + 1);
 				return;
 			}
+			// complete example loadouts (raid pages) take precedence over the
+			// ranked recommendation tables
+			List<ExampleSetup> examples = exampleSetupParser.parse(wikitext);
 			List<GearSetup> setups = parser.parse(wikitext);
-			if (setups.isEmpty())
+			if (examples.isEmpty() && setups.isEmpty())
 			{
 				tryCandidates(candidates, index + 1);
 				return;
 			}
 			List<InventorySetup> inventories = inventoryParser.parse(wikitext);
-			SwingUtilities.invokeLater(() -> showSetups(candidate, setups, inventories));
+			SwingUtilities.invokeLater(() -> showSetups(candidate, setups, inventories, examples));
 		});
 	}
 
-	private void showSetups(String pageTitle, List<GearSetup> setups, List<InventorySetup> inventories)
+	private void showSetups(String pageTitle, List<GearSetup> setups, List<InventorySetup> inventories,
+		List<ExampleSetup> examples)
 	{
 		currentPageTitle = pageTitle;
-		currentSetups = setups;
-		currentInventories = inventories;
 		userPickedInventory = false;
 		userEditedTag = false;
 		userEditedIcon = false;
+		wikiLinkButton.setVisible(true);
+
+		if (!examples.isEmpty())
+		{
+			// example mode: complete gear+inventory columns, no separate
+			// inventory choice — mode/tier combos appear only when the page
+			// actually has those levels (ToB guide), otherwise it's a single
+			// dropdown (CoX/ToA)
+			currentExamples = examples;
+			currentSetups = null;
+			currentInventories = Collections.emptyList();
+
+			updatingCombos = true;
+			List<String> modes = distinctLevel(examples, 0);
+			modeCombo.setModel(toModel(modes));
+			modeCombo.setVisible(modes.size() > 1);
+			rebuildExampleTiers();
+			rebuildExampleLabels();
+			inventoryCombo.setVisible(false);
+			updatingCombos = false;
+
+			status(examples.size() + " example setups on " + displayTitle(pageTitle), null);
+			resolveSelection();
+			return;
+		}
+
+		currentExamples = Collections.emptyList();
+		modeCombo.setVisible(false);
+		tierCombo.setVisible(false);
+		currentSetups = setups;
+		currentInventories = inventories;
 
 		updatingCombos = true;
 		DefaultComboBoxModel<String> setupModel = new DefaultComboBoxModel<>();
@@ -625,7 +717,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 		setupCombo.setModel(setupModel);
 		setupCombo.setVisible(true);
-		wikiLinkButton.setVisible(true);
 
 		DefaultComboBoxModel<String> invModel = new DefaultComboBoxModel<>();
 		invModel.addElement(NO_INVENTORY);
@@ -640,6 +731,90 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		status(setups.size() + (setups.size() == 1 ? " setup on " : " setups on ") + displayTitle(pageTitle), null);
 		resolveSelection();
+	}
+
+	private static DefaultComboBoxModel<String> toModel(List<String> values)
+	{
+		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+		for (String value : values)
+		{
+			model.addElement(value);
+		}
+		return model;
+	}
+
+	private static String pathLevel(ExampleSetup example, int level)
+	{
+		return level < example.getPath().size() ? example.getPath().get(level) : "";
+	}
+
+	private static List<String> distinctLevel(List<ExampleSetup> examples, int level)
+	{
+		List<String> values = new ArrayList<>();
+		for (ExampleSetup example : examples)
+		{
+			String value = pathLevel(example, level);
+			if (!values.contains(value))
+			{
+				values.add(value);
+			}
+		}
+		return values;
+	}
+
+	/** Examples matching the visible mode/tier selections. */
+	private List<ExampleSetup> filteredExamples()
+	{
+		List<ExampleSetup> filtered = new ArrayList<>();
+		Object mode = modeCombo.isVisible() ? modeCombo.getSelectedItem() : null;
+		Object tier = tierCombo.isVisible() ? tierCombo.getSelectedItem() : null;
+		for (ExampleSetup example : currentExamples)
+		{
+			if (mode != null && !mode.equals(pathLevel(example, 0)))
+			{
+				continue;
+			}
+			if (tier != null && !tier.equals(pathLevel(example, 1)))
+			{
+				continue;
+			}
+			filtered.add(example);
+		}
+		return filtered;
+	}
+
+	private void rebuildExampleTiers()
+	{
+		List<ExampleSetup> modeFiltered = new ArrayList<>();
+		Object mode = modeCombo.isVisible() ? modeCombo.getSelectedItem() : null;
+		for (ExampleSetup example : currentExamples)
+		{
+			if (mode == null || mode.equals(pathLevel(example, 0)))
+			{
+				modeFiltered.add(example);
+			}
+		}
+		List<String> tiers = distinctLevel(modeFiltered, 1);
+		tierCombo.setModel(toModel(tiers));
+		tierCombo.setVisible(tiers.size() > 1);
+	}
+
+	private void rebuildExampleLabels()
+	{
+		List<String> labels = new ArrayList<>();
+		for (ExampleSetup example : filteredExamples())
+		{
+			labels.add(example.getLabel());
+		}
+		setupCombo.setModel(toModel(labels));
+		setupCombo.setVisible(!labels.isEmpty());
+	}
+
+	private ExampleSetup selectedExample()
+	{
+		List<ExampleSetup> filtered = filteredExamples();
+		int idx = setupCombo.getSelectedIndex();
+		return idx >= 0 && idx < filtered.size() ? filtered.get(idx) : null;
 	}
 
 	/**
@@ -687,24 +862,39 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 	private void resolveSelection()
 	{
-		if (currentSetups == null)
+		List<GearSetup> selectedSetups;
+		InventorySetup selectedInventory;
+		if (!currentExamples.isEmpty())
 		{
-			return;
+			ExampleSetup example = selectedExample();
+			if (example == null)
+			{
+				return;
+			}
+			selectedSetups = Collections.singletonList(example.getGear());
+			selectedInventory = example.getInventory();
 		}
-		int setupIdx = setupCombo.getSelectedIndex();
-		if (setupIdx < 0)
+		else
 		{
-			return;
-		}
-		boolean allStyles = setupIdx == currentSetups.size();
-		List<GearSetup> selectedSetups = allStyles
-			? currentSetups
-			: Collections.singletonList(currentSetups.get(setupIdx));
+			if (currentSetups == null)
+			{
+				return;
+			}
+			int setupIdx = setupCombo.getSelectedIndex();
+			if (setupIdx < 0)
+			{
+				return;
+			}
+			boolean allStyles = setupIdx == currentSetups.size();
+			selectedSetups = allStyles
+				? currentSetups
+				: Collections.singletonList(currentSetups.get(setupIdx));
 
-		int invIdx = inventoryCombo.isVisible() ? inventoryCombo.getSelectedIndex() : 0;
-		InventorySetup selectedInventory = invIdx > 0 && invIdx <= currentInventories.size()
-			? currentInventories.get(invIdx - 1)
-			: null;
+			int invIdx = inventoryCombo.isVisible() ? inventoryCombo.getSelectedIndex() : 0;
+			selectedInventory = invIdx > 0 && invIdx <= currentInventories.size()
+				? currentInventories.get(invIdx - 1)
+				: null;
+		}
 
 		clientThread.invokeLater(() ->
 		{
@@ -1062,10 +1252,50 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			return "";
 		}
-		String styleLabel = resolutions.size() > 1
-			? "all"
-			: resolutions.get(0).getSetup().getStyleLabel();
-		return TagNames.build(currentPageTitle, styleLabel);
+		String styleLabel;
+		if (!currentExamples.isEmpty())
+		{
+			styleLabel = exampleStyleLabel();
+		}
+		else if (resolutions.size() > 1)
+		{
+			styleLabel = "all";
+		}
+		else
+		{
+			styleLabel = resolutions.get(0).getSetup().getStyleLabel();
+		}
+		return TagNames.build(displayTitle(currentPageTitle), styleLabel);
+	}
+
+	/**
+	 * The visible cascade selections joined, with the page name scrubbed out
+	 * of section labels ("Theatre of Blood (Hard Mode)" contributes just
+	 * "Hard Mode" to a Theatre of Blood tag).
+	 */
+	private String exampleStyleLabel()
+	{
+		StringBuilder label = new StringBuilder();
+		String page = displayTitle(currentPageTitle).toLowerCase(Locale.ROOT);
+		for (JComboBox<String> combo : Arrays.asList(modeCombo, tierCombo, setupCombo))
+		{
+			Object selected = combo.isVisible() ? combo.getSelectedItem() : null;
+			if (selected == null)
+			{
+				continue;
+			}
+			String part = selected.toString();
+			StringBuilder scrubbed = new StringBuilder();
+			for (String word : part.split("[\\s()]+"))
+			{
+				if (!word.isEmpty() && !page.contains(word.toLowerCase(Locale.ROOT)))
+				{
+					scrubbed.append(word).append(' ');
+				}
+			}
+			label.append(scrubbed.length() > 0 ? scrubbed : part).append(' ');
+		}
+		return label.toString().trim();
 	}
 
 	private void doImport()
@@ -1112,6 +1342,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	{
 		currentPageTitle = null;
 		currentSetups = null;
+		currentExamples = Collections.emptyList();
 		currentInventories = Collections.emptyList();
 		currentResolutions = null;
 		currentInventoryResolution = null;
@@ -1119,6 +1350,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		userPickedInventory = false;
 		userEditedTag = false;
 		userEditedIcon = false;
+		modeCombo.setVisible(false);
+		tierCombo.setVisible(false);
 		setupCombo.setVisible(false);
 		inventoryCombo.setVisible(false);
 		wikiLinkButton.setVisible(false);

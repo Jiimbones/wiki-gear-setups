@@ -15,6 +15,13 @@ Source: strategy pages (usually `<Boss>/Strategies`), template `{{Recommended eq
 - `{{efn|text|name=x}}` = footnote → attach as `note` to preceding item. Variants: `{{efn|name=x}}` / `{{efn||name=x}}` are back-references with no text — ignore. Note text may contain `[[links]]` (strip to display text) and nested templates (drop).
 - `N/A` or empty param → slot intentionally empty at that rank.
 
+## Example-setups idiom (raid pages, verified 2026-07-20)
+Complete concrete loadouts in a wikitable: `!` header cells label columns; parallel rows hold `{{Equipment}}` (params head/cape/neck/ammo/weapon/torso|body/shield/legs/gloves|hands/boots|feet/ring), `{{Inventory}}`, `{{Rune pouch}}` per column. Column pairing is positional across rows.
+- ToA/CoX: one table, tier columns ("Minimum (0-100 Invocation)" — header labels continue on following lines).
+- ToB: `Guide:Theatre of Blood setups` — h2 mode sections (Normal/Hard), h3 tier subsections, role columns (Magic/Melee/Range). Section headings become the setup path → cascading UI dropdowns.
+- Cells may be a bare `|` line with the template starting on the next line — table markup is only meaningful at template depth 0.
+- `ExampleSetupParser`; discovery probes `Guide:<base> setups` before other candidates (missing guide = fast API error).
+
 ## Fixture inventory (frozen 2026-07-19, src/test/resources/fixtures/)
 | fixture | templates | notes |
 |---|---|---|
@@ -23,6 +30,8 @@ Source: strategy pages (usually `<Boss>/Strategies`), template `{{Recommended eq
 | cox-strategies | 15 | stress test |
 | alchemical-hydra-strategies | 2 | slayer boss |
 | dragon-slayer-ii | 0 | negative path (quest page, no template) |
+| toa-strategies | 5+ example columns | example-setups wikitable, multi-line headers, separate pouch row |
+| tob-setups-guide | 12+ role columns | mode/tier/role hierarchy (frozen 2026-07-20) |
 
 ## Parsing rules
 1. Locate `{{Recommended equipment` occurrences via bracket-depth scan (NOT regex-only — templates nest).
