@@ -1,7 +1,6 @@
 # Changelog
 
 ## Unreleased
-- 2026-07-20: Raid loadouts — dynamic "best per style" option (first setup per combat style), default on tri-brid pages, tag suffix "raid"; works for any future raid without code changes; 118 tests green.
 - 2026-07-20: Report-bug button (GitHub issue prefilled with page name), wiki downtime resilience (15s call timeout, stale-cache fallback, friendly connection errors), support URL in plugin properties; 113 tests green.
 - 2026-07-20: Round 6 — trouver parchment companions ("+{{plinkp|...}}") no longer parsed as gear (Calvar'ion), ring of suffering (r)/(ri) upgrades, named missing inventory items in red, Name/Icon/Import moved under the grid, real PayPal donation link; 113 tests green.
 - 2026-07-20: Set gate now requires the set WORN in the layout (slot-aware groups + fixpoint re-resolution), not merely banked — owning blood moon while Bandos wins the body slot no longer keeps the helm; 110 tests green.

@@ -86,7 +86,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final Color SUBSTITUTE = ColorScheme.PROGRESS_INPROGRESS_COLOR;
 	private static final Color MISSING = ColorScheme.PROGRESS_ERROR_COLOR;
 	private static final String ALL_STYLES = "All styles (one tab)";
-	private static final String BEST_PER_STYLE = "Raid loadout (best per style)";
 	private static final String NO_INVENTORY = "No inventory";
 	private static final int GRID_COLS = 8;
 	private static final int CELL_W = 26;
@@ -123,8 +122,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private List<SearchResult> searchResults = Collections.emptyList();
 	private String currentPageTitle;
 	private List<GearSetup> currentSetups;
-	// one entry per setup-combo row: the setups that row imports
-	private List<List<GearSetup>> comboSelections = Collections.emptyList();
 	private List<InventorySetup> currentInventories = Collections.emptyList();
 	private List<SetupResolution> currentResolutions;
 	private InventoryResolution currentInventoryResolution;
@@ -618,30 +615,15 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		updatingCombos = true;
 		DefaultComboBoxModel<String> setupModel = new DefaultComboBoxModel<>();
-		comboSelections = new ArrayList<>();
 		for (GearSetup setup : setups)
 		{
 			setupModel.addElement(setup.getStyleLabel());
-			comboSelections.add(Collections.singletonList(setup));
-		}
-		List<GearSetup> raidLoadout = RaidLoadout.bestPerStyle(setups);
-		if (raidLoadout.size() >= 2 && raidLoadout.size() < setups.size())
-		{
-			setupModel.addElement(BEST_PER_STYLE);
-			comboSelections.add(raidLoadout);
 		}
 		if (setups.size() > 1)
 		{
 			setupModel.addElement(ALL_STYLES);
-			comboSelections.add(setups);
 		}
 		setupCombo.setModel(setupModel);
-		// a full tri-brid page (raids) defaults to the combined loadout;
-		// two-style pages (Zulrah) keep the first setup as before
-		if (raidLoadout.size() >= 3 && raidLoadout.size() < setups.size())
-		{
-			setupCombo.setSelectedIndex(setups.size());
-		}
 		setupCombo.setVisible(true);
 		wikiLinkButton.setVisible(true);
 
@@ -677,13 +659,11 @@ public class WikiGearSetupsPanel extends PluginPanel
 			return;
 		}
 		int setupIdx = setupCombo.getSelectedIndex();
-		if (setupIdx < 0 || setupIdx >= comboSelections.size()
-			|| comboSelections.get(setupIdx).size() != 1)
+		if (currentSetups == null || setupIdx < 0 || setupIdx >= currentSetups.size())
 		{
-			// combined selections (raid/all) have no single style to match
 			return;
 		}
-		String style = comboSelections.get(setupIdx).get(0).getStyleLabel();
+		String style = currentSetups.get(setupIdx).getStyleLabel();
 		// combat-style tokens first: "Mage" gear finds a "Magic switches" inventory
 		for (int i = 0; i < currentInventories.size(); i++)
 		{
@@ -712,11 +692,14 @@ public class WikiGearSetupsPanel extends PluginPanel
 			return;
 		}
 		int setupIdx = setupCombo.getSelectedIndex();
-		if (setupIdx < 0 || setupIdx >= comboSelections.size())
+		if (setupIdx < 0)
 		{
 			return;
 		}
-		List<GearSetup> selectedSetups = comboSelections.get(setupIdx);
+		boolean allStyles = setupIdx == currentSetups.size();
+		List<GearSetup> selectedSetups = allStyles
+			? currentSetups
+			: Collections.singletonList(currentSetups.get(setupIdx));
 
 		int invIdx = inventoryCombo.isVisible() ? inventoryCombo.getSelectedIndex() : 0;
 		InventorySetup selectedInventory = invIdx > 0 && invIdx <= currentInventories.size()
@@ -1079,20 +1062,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			return "";
 		}
-		String styleLabel;
-		Object selected = setupCombo.getSelectedItem();
-		if (BEST_PER_STYLE.equals(selected))
-		{
-			styleLabel = "raid";
-		}
-		else if (resolutions.size() > 1)
-		{
-			styleLabel = "all";
-		}
-		else
-		{
-			styleLabel = resolutions.get(0).getSetup().getStyleLabel();
-		}
+		String styleLabel = resolutions.size() > 1
+			? "all"
+			: resolutions.get(0).getSetup().getStyleLabel();
 		return TagNames.build(currentPageTitle, styleLabel);
 	}
 
@@ -1140,7 +1112,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 	{
 		currentPageTitle = null;
 		currentSetups = null;
-		comboSelections = Collections.emptyList();
 		currentInventories = Collections.emptyList();
 		currentResolutions = null;
 		currentInventoryResolution = null;
