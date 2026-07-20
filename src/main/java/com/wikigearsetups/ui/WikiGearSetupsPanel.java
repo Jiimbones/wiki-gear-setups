@@ -2,6 +2,7 @@ package com.wikigearsetups.ui;
 
 import com.wikigearsetups.WikiGearSetupsConfig;
 import com.wikigearsetups.bank.BankStateCache;
+import com.wikigearsetups.bank.ExampleGearEnricher;
 import com.wikigearsetups.bank.InventoryPick;
 import com.wikigearsetups.bank.InventoryResolution;
 import com.wikigearsetups.bank.InventoryResolver;
@@ -115,6 +116,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final DefaultListModel<String> resultsModel = new DefaultListModel<>();
 	private final JList<String> resultsList = new JList<>(resultsModel);
 	private final JButton wikiLinkButton = new RoundedButton("Open wiki page");
+	private final JComboBox<String> sourceCombo = new JComboBox<>();
 	private final JComboBox<String> modeCombo = new JComboBox<>();
 	private final JComboBox<String> tierCombo = new JComboBox<>();
 	private final JComboBox<String> setupCombo = new JComboBox<>();
@@ -127,6 +129,10 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 	private List<SearchResult> searchResults = Collections.emptyList();
 	private String currentPageTitle;
+	// everything the loaded page offers; the source selector picks which view
+	private List<GearSetup> pageSetups = Collections.emptyList();
+	private List<InventorySetup> pageInventories = Collections.emptyList();
+	private List<ExampleSetup> pageExamples = Collections.emptyList();
 	private List<GearSetup> currentSetups;
 	// non-empty = example mode: complete gear+inventory columns from the page,
 	// chosen through the mode/tier/label cascade instead of the classic combos
@@ -235,6 +241,23 @@ public class WikiGearSetupsPanel extends PluginPanel
 		wikiLinkButton.addActionListener(e -> openWikiPage());
 		flow.add(wikiLinkButton);
 		flow.add(Box.createVerticalStrut(6));
+
+		sourceCombo.setAlignmentX(LEFT_ALIGNMENT);
+		sourceCombo.setToolTipText("Complete wiki example loadouts, or gear built from the ranked recommendations");
+		styleCombo(sourceCombo);
+		sourceCombo.addActionListener(e ->
+		{
+			if (!updatingCombos)
+			{
+				userEditedTag = false;
+				userEditedIcon = false;
+				userPickedInventory = false;
+				applySource();
+			}
+		});
+		sourceCombo.setVisible(false);
+		flow.add(sourceCombo);
+		flow.add(Box.createVerticalStrut(4));
 
 		modeCombo.setAlignmentX(LEFT_ALIGNMENT);
 		modeCombo.setToolTipText("Mode section on the wiki page");
@@ -670,23 +693,43 @@ public class WikiGearSetupsPanel extends PluginPanel
 		List<ExampleSetup> examples)
 	{
 		currentPageTitle = pageTitle;
+		pageSetups = setups;
+		pageInventories = inventories;
+		pageExamples = examples;
 		userPickedInventory = false;
 		userEditedTag = false;
 		userEditedIcon = false;
 		wikiLinkButton.setVisible(true);
 
-		if (!examples.isEmpty())
+		// both formats present: the player chooses; examples default (raids)
+		updatingCombos = true;
+		DefaultComboBoxModel<String> sourceModel = new DefaultComboBoxModel<>();
+		sourceModel.addElement("Example setups");
+		sourceModel.addElement("Gear by style");
+		sourceCombo.setModel(sourceModel);
+		sourceCombo.setVisible(!examples.isEmpty() && !setups.isEmpty());
+		updatingCombos = false;
+
+		applySource();
+	}
+
+	private void applySource()
+	{
+		boolean exampleMode = !pageExamples.isEmpty()
+			&& (!sourceCombo.isVisible() || sourceCombo.getSelectedIndex() == 0);
+
+		if (exampleMode)
 		{
 			// example mode: complete gear+inventory columns, no separate
 			// inventory choice — mode/tier combos appear only when the page
 			// actually has those levels (ToB guide), otherwise it's a single
 			// dropdown (CoX/ToA)
-			currentExamples = examples;
+			currentExamples = pageExamples;
 			currentSetups = null;
 			currentInventories = Collections.emptyList();
 
 			updatingCombos = true;
-			List<String> modes = distinctLevel(examples, 0);
+			List<String> modes = distinctLevel(pageExamples, 0);
 			modeCombo.setModel(toModel(modes));
 			modeCombo.setVisible(modes.size() > 1);
 			rebuildExampleTiers();
@@ -694,7 +737,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 			inventoryCombo.setVisible(false);
 			updatingCombos = false;
 
-			status(examples.size() + " example setups on " + displayTitle(pageTitle), null);
+			status(pageExamples.size() + " example setups on " + displayTitle(currentPageTitle), null);
 			resolveSelection();
 			return;
 		}
@@ -702,16 +745,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 		currentExamples = Collections.emptyList();
 		modeCombo.setVisible(false);
 		tierCombo.setVisible(false);
-		currentSetups = setups;
-		currentInventories = inventories;
+		currentSetups = pageSetups;
+		currentInventories = pageInventories;
 
 		updatingCombos = true;
 		DefaultComboBoxModel<String> setupModel = new DefaultComboBoxModel<>();
-		for (GearSetup setup : setups)
+		for (GearSetup setup : pageSetups)
 		{
 			setupModel.addElement(setup.getStyleLabel());
 		}
-		if (setups.size() > 1)
+		if (pageSetups.size() > 1)
 		{
 			setupModel.addElement(ALL_STYLES);
 		}
@@ -720,16 +763,17 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		DefaultComboBoxModel<String> invModel = new DefaultComboBoxModel<>();
 		invModel.addElement(NO_INVENTORY);
-		for (InventorySetup inventory : inventories)
+		for (InventorySetup inventory : pageInventories)
 		{
 			invModel.addElement("Inv: " + inventory.getLabel());
 		}
 		inventoryCombo.setModel(invModel);
-		inventoryCombo.setVisible(!inventories.isEmpty());
+		inventoryCombo.setVisible(!pageInventories.isEmpty());
 		autoSelectInventory();
 		updatingCombos = false;
 
-		status(setups.size() + (setups.size() == 1 ? " setup on " : " setups on ") + displayTitle(pageTitle), null);
+		status(pageSetups.size() + (pageSetups.size() == 1 ? " setup on " : " setups on ")
+			+ displayTitle(currentPageTitle), null);
 		resolveSelection();
 	}
 
@@ -871,7 +915,10 @@ public class WikiGearSetupsPanel extends PluginPanel
 			{
 				return;
 			}
-			selectedSetups = Collections.singletonList(example.getGear());
+			// unowned example items fall back through the page's ranked
+			// ladders so the tab still adapts to the player's gear
+			selectedSetups = Collections.singletonList(
+				ExampleGearEnricher.enrich(example.getGear(), pageSetups));
 			selectedInventory = example.getInventory();
 		}
 		else
@@ -1342,6 +1389,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	{
 		currentPageTitle = null;
 		currentSetups = null;
+		pageSetups = Collections.emptyList();
+		pageInventories = Collections.emptyList();
+		pageExamples = Collections.emptyList();
 		currentExamples = Collections.emptyList();
 		currentInventories = Collections.emptyList();
 		currentResolutions = null;
@@ -1350,6 +1400,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		userPickedInventory = false;
 		userEditedTag = false;
 		userEditedIcon = false;
+		sourceCombo.setVisible(false);
 		modeCombo.setVisible(false);
 		tierCombo.setVisible(false);
 		setupCombo.setVisible(false);

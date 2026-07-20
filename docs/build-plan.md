@@ -124,6 +124,8 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] Panel example mode: cascading Mode → Tier → Label combos, shown only when the page has that level (ToA/CoX = single dropdown, ToB = all three); paired inventory imported automatically, inventory combo hidden; tag name from cascade with page words scrubbed
 - [x] PageDiscovery probes "Guide:<base> setups" first (ToB); displayTitle strips Guide:/" setups"
 - [x] 10 new/updated tests; 119 total green
+- [x] Personalization restored in example mode: `ExampleGearEnricher` — each concrete example item anchors into the page's ranked ladder for that slot (anchor first: owned→placed, unowned→goal; ladder = owned fallback, style-correct implicitly). Source combo ("Example setups"/"Gear by style") shown when a page has both formats; tabber pages (Zulrah/Vorkath) unaffected (classic only)
+- [x] 4 new tests; 123 total green
 - [ ] User visual verification in dev client
 
 ## Next
