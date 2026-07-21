@@ -23,6 +23,7 @@ import com.wikigearsetups.wiki.InventoryParser;
 import com.wikigearsetups.wiki.InventorySetup;
 import com.wikigearsetups.wiki.PageDiscovery;
 import com.wikigearsetups.wiki.SearchResult;
+import com.wikigearsetups.wiki.SourceScorer;
 import com.wikigearsetups.wiki.WikiClient;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -714,7 +715,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	{
 		currentPageTitle = pageTitle;
 		pageSetups = setups;
-		pageInventories = inventories;
+		// example columns own their inventories; they shouldn't also appear as
+		// standalone choices for the ranked setups
+		pageInventories = ExampleSetupParser.withoutExampleInventories(inventories, examples);
 		pageExamples = examples;
 		userPickedInventory = false;
 		userEditedTag = false;
@@ -723,12 +726,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 		recommendedToggle.setVisible(true);
 		updateImportLabel();
 
-		// both formats present: the player chooses; examples default (raids)
+		// both formats present: default to whichever is more complete on this
+		// page, and say so when the margin is worth mentioning
 		updatingCombos = true;
+		SourceScorer.Result score = SourceScorer.score(examples, setups, pageInventories);
+		String note = score.isDecisive() ? "  (more complete)" : "";
 		DefaultComboBoxModel<String> sourceModel = new DefaultComboBoxModel<>();
-		sourceModel.addElement("Example setups");
-		sourceModel.addElement("Gear by style");
+		sourceModel.addElement("Example setups" + (score.isPreferExamples() ? note : ""));
+		sourceModel.addElement("Gear by style" + (score.isPreferExamples() ? "" : note));
 		sourceCombo.setModel(sourceModel);
+		sourceCombo.setSelectedIndex(score.isPreferExamples() ? 0 : 1);
 		sourceCombo.setVisible(!examples.isEmpty() && !setups.isEmpty());
 		updatingCombos = false;
 

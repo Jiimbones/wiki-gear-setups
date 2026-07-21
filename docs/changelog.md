@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-21: Source auto-scoring — `SourceScorer` picks the more complete of a page's example columns vs ranked setups as the default (parse-time signals only), labels the winner when the margin is decisive; example-owned inventories no longer leak into the ranked inventory dropdown; 142 tests green.
 - 2026-07-21: "Show wiki BIS" mode — `PickStrategy` on both resolvers shows/imports the wiki's own first choice with owned/unowned marking; `-bis` tag suffix and relabelled import button prevent overwriting the adaptive tab; 137 tests green.
 - 2026-07-21: Fixed a fresh-clone test failure — `.gitattributes` converted frozen fixtures to CRLF and the tabber-label pattern captured the stray `\r`; parsers now normalise line endings at entry (found by verifying the backup restore).
 - 2026-07-20: Adaptive inventory — unowned switch items fall back through gear ladders, unowned consumables substitute the best owned of their class (ConsumableGroups); divine potions satisfy base potion recs; applies in example and classic modes; 127 tests green.

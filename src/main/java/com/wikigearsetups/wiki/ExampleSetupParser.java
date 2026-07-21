@@ -252,6 +252,39 @@ public class ExampleSetupParser
 		return null;
 	}
 
+	/**
+	 * {@link InventoryParser} scans the whole page, so on a raid page it also
+	 * returns the inventories that belong to example columns. Those are
+	 * already paired with their gear and shouldn't appear as standalone
+	 * choices for the ranked setups. Matched on slot contents rather than
+	 * whole-object equality, because the two parses derive labels differently.
+	 */
+	public static List<InventorySetup> withoutExampleInventories(List<InventorySetup> pageInventories,
+		List<ExampleSetup> examples)
+	{
+		if (pageInventories.isEmpty() || examples.isEmpty())
+		{
+			return pageInventories;
+		}
+		List<List<String>> exampleSlots = new ArrayList<>();
+		for (ExampleSetup example : examples)
+		{
+			if (example.getInventory() != null)
+			{
+				exampleSlots.add(example.getInventory().getSlots());
+			}
+		}
+		List<InventorySetup> remaining = new ArrayList<>();
+		for (InventorySetup inventory : pageInventories)
+		{
+			if (!exampleSlots.contains(inventory.getSlots()))
+			{
+				remaining.add(inventory);
+			}
+		}
+		return remaining;
+	}
+
 	private static int depthDelta(String line)
 	{
 		int depth = 0;
