@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-21: Disclaimer reflow (logo/title/body/accept/note, no clipping — shared `ScrollableWrapper`), copy now takes responsibility for wrong setups rather than the wiki's authors, bug report as a body line; white checkbox tick (`CheckBoxIcon`); inventory auto-select prefers an exact label match (`InventoryMatcher`); 147 tests green.
 - 2026-07-21: First-run disclaimer — in-panel card (BIS caveat, privacy note, bug reporting, thank-you), gated on `disclaimerAccepted`, re-openable from the footer developer label.
 - 2026-07-21: Source auto-scoring — `SourceScorer` picks the more complete of a page's example columns vs ranked setups as the default (parse-time signals only), labels the winner when the margin is decisive; example-owned inventories no longer leak into the ranked inventory dropdown; 142 tests green.
 - 2026-07-21: "Show wiki BIS" mode — `PickStrategy` on both resolvers shows/imports the wiki's own first choice with owned/unowned marking; `-bis` tag suffix and relabelled import button prevent overwriting the adaptive tab; 137 tests green.

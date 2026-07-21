@@ -62,7 +62,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ImageIcon;
 import javax.swing.ListSelectionModel;
-import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
@@ -356,6 +355,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		recommendedToggle.setOpaque(false);
 		recommendedToggle.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		recommendedToggle.setFocusPainted(false);
+		CheckBoxIcon.apply(recommendedToggle);
 		recommendedToggle.setToolTipText("Show the wiki's own first choice for every slot, "
 			+ "marking what you own. Also changes what Import writes.");
 		recommendedToggle.addActionListener(e ->
@@ -421,8 +421,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		main.add(footer(), BorderLayout.SOUTH);
 
 		add(main, CARD_MAIN);
-		add(new DisclaimerPanel(bannerIcon(), () -> LinkBrowser.browse(bugReportUrl()),
-			this::acceptDisclaimer), CARD_DISCLAIMER);
+		add(new DisclaimerPanel(bannerIcon(), this::acceptDisclaimer), CARD_DISCLAIMER);
 		cards.show(this, disclaimerAccepted() ? CARD_MAIN : CARD_DISCLAIMER);
 	}
 
@@ -483,47 +482,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 			label.setForeground(isSelected ? Color.WHITE : ColorScheme.LIGHT_GRAY_COLOR);
 			label.setBackground(isSelected ? ColorScheme.DARKER_GRAY_HOVER_COLOR : ColorScheme.DARKER_GRAY_COLOR);
 			return label;
-		}
-	}
-
-	/** Scroll content that always matches the viewport width, natural height. */
-	private static final class ScrollableWrapper extends JPanel implements Scrollable
-	{
-		ScrollableWrapper(java.awt.Component content)
-		{
-			super(new BorderLayout());
-			setBackground(ColorScheme.DARK_GRAY_COLOR);
-			add(content, BorderLayout.NORTH);
-		}
-
-		@Override
-		public Dimension getPreferredScrollableViewportSize()
-		{
-			return getPreferredSize();
-		}
-
-		@Override
-		public int getScrollableUnitIncrement(java.awt.Rectangle visibleRect, int orientation, int direction)
-		{
-			return 16;
-		}
-
-		@Override
-		public int getScrollableBlockIncrement(java.awt.Rectangle visibleRect, int orientation, int direction)
-		{
-			return 64;
-		}
-
-		@Override
-		public boolean getScrollableTracksViewportWidth()
-		{
-			return true;
-		}
-
-		@Override
-		public boolean getScrollableTracksViewportHeight()
-		{
-			return false;
 		}
 	}
 
@@ -974,25 +932,15 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			return;
 		}
-		String style = currentSetups.get(setupIdx).getStyleLabel();
-		// combat-style tokens first: "Mage" gear finds a "Magic switches" inventory
-		for (int i = 0; i < currentInventories.size(); i++)
+		List<String> labels = new ArrayList<>();
+		for (InventorySetup inventory : currentInventories)
 		{
-			if (StyleTokens.stylesOverlap(style, currentInventories.get(i).getLabel()))
-			{
-				inventoryCombo.setSelectedIndex(i + 1);
-				return;
-			}
+			labels.add(inventory.getLabel());
 		}
-		String styleLower = style.toLowerCase(Locale.ROOT);
-		for (int i = 0; i < currentInventories.size(); i++)
+		int match = InventoryMatcher.bestMatch(currentSetups.get(setupIdx).getStyleLabel(), labels);
+		if (match >= 0)
 		{
-			String label = currentInventories.get(i).getLabel().toLowerCase(Locale.ROOT);
-			if (label.contains(styleLower) || styleLower.contains(label))
-			{
-				inventoryCombo.setSelectedIndex(i + 1);
-				return;
-			}
+			inventoryCombo.setSelectedIndex(match + 1);
 		}
 	}
 
