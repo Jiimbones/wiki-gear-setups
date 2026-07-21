@@ -130,5 +130,16 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] 4 new tests; 127 total green
 - [ ] User visual verification in dev client
 
+## Backup / restore point (2026-07-21)
+- [x] Tag `v1.0-backup-2026-07-21` + git bundle + full zip (incl. `.git`) in `Desktop\WikiGearSetups-backups\` with RESTORE.md. Verified by cloning the bundle and running the suite
+- [x] Found via that verification: fresh clones failed `InventoryParserTest` — `.gitattributes` `* text=auto` rewrote fixtures to CRLF and the line-anchored tabber pattern captured `\r`. Fixed with `*.wikitext -text` **and** line-ending normalization at all three parser entry points (defence in depth); CRLF regression tests added
+
+## Three-feature round (2026-07-21)
+- [x] **Show wiki BIS mode** — `PickStrategy` (BEST_OWNED / TOP_RECOMMENDATION) on both resolvers; suspends only ownership-derived reasoning (set gating, set-worn fixpoint, inventory substitution, missing-gear config); checkbox drives preview **and** import; `-bis` tag suffix + relabelled button prevent overwriting the adaptive tab; extras suppressed. See decisions #7/#8
+- [x] **Source auto-scoring** — `SourceScorer` (parse-time only: slot coverage, inventory/runes presence, ranked depth); winner preselected, labelled only when margin ≥ 2. Prerequisite: `ExampleSetupParser.withoutExampleInventories` stops example-owned inventories leaking into the ranked dropdown (they also poisoned the inventory signal)
+- [x] **First-run disclaimer** — `DisclaimerPanel` on a `CardLayout` card outside the scroll pane (pinned header/footer behaviour untouched); gated on config key `disclaimerAccepted`; footer "Developed by Jiimbones" re-opens it; banner icon scaled once and shared
+- [x] 15 new tests; 142 total green
+- [ ] User visual verification in dev client
+
 ## Next
 - [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)

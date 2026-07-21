@@ -26,6 +26,7 @@ import com.wikigearsetups.wiki.SearchResult;
 import com.wikigearsetups.wiki.SourceScorer;
 import com.wikigearsetups.wiki.WikiClient;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -68,6 +69,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStats;
 import net.runelite.client.plugins.banktags.tabs.Layout;
@@ -98,6 +100,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final int CELL_W = 26;
 	private static final int CELL_H = 24;
 	private static final String DEVELOPER_NAME = "Jiimbones";
+	private static final String CARD_MAIN = "main";
+	private static final String CARD_DISCLAIMER = "disclaimer";
+	private static final String DISCLAIMER_KEY = "disclaimerAccepted";
 	private static final String DONATION_URL = "https://www.paypal.com/ncp/payment/FQTFP8N8H7P2W";
 	private static final String BUG_REPORT_URL = "https://github.com/Jiimbones/wiki-gear-setups/issues/new";
 
@@ -113,6 +118,10 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final ItemManager itemManager;
 	private final ClientThread clientThread;
 	private final WikiGearSetupsConfig config;
+	private final ConfigManager configManager;
+	private final CardLayout cards = new CardLayout();
+	private ImageIcon bannerIcon;
+	private boolean bannerLoaded;
 
 	private final FlatTextField searchField = new FlatTextField();
 	private final JLabel statusLabel = new JLabel(" ");
@@ -154,9 +163,10 @@ public class WikiGearSetupsPanel extends PluginPanel
 	public WikiGearSetupsPanel(WikiClient wikiClient, OwnershipResolver ownershipResolver,
 		InventoryResolver inventoryResolver, BankStateCache bankStateCache,
 		BankTagImporter importer, ItemNameIndex itemNameIndex, ItemManager itemManager,
-		ClientThread clientThread, WikiGearSetupsConfig config)
+		ClientThread clientThread, WikiGearSetupsConfig config, ConfigManager configManager)
 	{
 		super(false);
+		this.configManager = configManager;
 		this.wikiClient = wikiClient;
 		this.ownershipResolver = ownershipResolver;
 		this.inventoryResolver = inventoryResolver;
@@ -167,17 +177,22 @@ public class WikiGearSetupsPanel extends PluginPanel
 		this.clientThread = clientThread;
 		this.config = config;
 
-		setLayout(new BorderLayout(0, 8));
+		setLayout(cards);
 		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+		// the whole search/preview/import UI lives on one card so the
+		// first-run disclaimer can take the panel over without disturbing it
+		JPanel main = new JPanel(new BorderLayout(0, 8));
+		main.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
 		// header: logo, search, status — always visible
 		JPanel north = new JPanel();
 		north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
 		north.setOpaque(false);
-		JLabel banner = loadBanner();
-		if (banner != null)
+		if (bannerIcon() != null)
 		{
+			JLabel banner = new JLabel(bannerIcon());
 			banner.setAlignmentX(LEFT_ALIGNMENT);
 			north.add(banner);
 			north.add(Box.createVerticalStrut(8));
@@ -212,7 +227,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		statusLabel.setAlignmentX(LEFT_ALIGNMENT);
 		statusLabel.setFont(FontManager.getRunescapeSmallFont());
 		north.add(statusLabel);
-		add(north, BorderLayout.NORTH);
+		main.add(north, BorderLayout.NORTH);
 
 		// middle: everything else scrolls when the client window is short
 		JPanel flow = new JPanel();
@@ -400,10 +415,31 @@ public class WikiGearSetupsPanel extends PluginPanel
 		scroll.setBorder(null);
 		scroll.getViewport().setBackground(ColorScheme.DARK_GRAY_COLOR);
 		SlimScrollBarUI.apply(scroll.getVerticalScrollBar());
-		add(scroll, BorderLayout.CENTER);
+		main.add(scroll, BorderLayout.CENTER);
 
 		// footer pinned to the very bottom regardless of content height
-		add(footer(), BorderLayout.SOUTH);
+		main.add(footer(), BorderLayout.SOUTH);
+
+		add(main, CARD_MAIN);
+		add(new DisclaimerPanel(bannerIcon(), () -> LinkBrowser.browse(bugReportUrl()),
+			this::acceptDisclaimer), CARD_DISCLAIMER);
+		cards.show(this, disclaimerAccepted() ? CARD_MAIN : CARD_DISCLAIMER);
+	}
+
+	private boolean disclaimerAccepted()
+	{
+		return configManager.getConfiguration(WikiGearSetupsConfig.GROUP, DISCLAIMER_KEY) != null;
+	}
+
+	private void acceptDisclaimer()
+	{
+		configManager.setConfiguration(WikiGearSetupsConfig.GROUP, DISCLAIMER_KEY, "1");
+		cards.show(this, CARD_MAIN);
+	}
+
+	private void showDisclaimer()
+	{
+		cards.show(this, CARD_DISCLAIMER);
 	}
 
 	/** The LAF paints field text dark — force light text on the inner field. */
@@ -491,21 +527,29 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 	}
 
-	/** Plugin logo shipped as resources/com/wikigearsetups/banner.png, or null when absent. */
-	private JLabel loadBanner()
+	/**
+	 * Plugin logo from resources/com/wikigearsetups/banner.png, scaled once
+	 * and shared by every card. Null when the resource is absent.
+	 */
+	private ImageIcon bannerIcon()
 	{
-		try
+		if (!bannerLoaded)
 		{
-			BufferedImage img = ImageUtil.loadImageResource(WikiGearSetupsPanel.class, "/com/wikigearsetups/banner.png");
-			int width = PluginPanel.PANEL_WIDTH - 16;
-			int height = Math.max(1, img.getHeight() * width / img.getWidth());
-			return new JLabel(new ImageIcon(img.getScaledInstance(width, height, Image.SCALE_SMOOTH)));
+			bannerLoaded = true;
+			try
+			{
+				BufferedImage img = ImageUtil.loadImageResource(WikiGearSetupsPanel.class,
+					"/com/wikigearsetups/banner.png");
+				int width = PluginPanel.PANEL_WIDTH - 16;
+				int height = Math.max(1, img.getHeight() * width / img.getWidth());
+				bannerIcon = new ImageIcon(img.getScaledInstance(width, height, Image.SCALE_SMOOTH));
+			}
+			catch (RuntimeException e)
+			{
+				log.debug("No banner resource", e);
+			}
 		}
-		catch (RuntimeException e)
-		{
-			log.debug("No banner resource", e);
-			return null;
-		}
+		return bannerIcon;
 	}
 
 	private JPanel footer()
@@ -518,6 +562,18 @@ public class WikiGearSetupsPanel extends PluginPanel
 		JLabel dev = new JLabel("Developed by " + DEVELOPER_NAME);
 		dev.setFont(FontManager.getRunescapeSmallFont());
 		dev.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
+		// doubles as the permanent home for the disclaimer, without spending
+		// any of the little horizontal room the footer has left
+		dev.setToolTipText("About / disclaimer");
+		dev.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+		dev.addMouseListener(new java.awt.event.MouseAdapter()
+		{
+			@Override
+			public void mouseClicked(java.awt.event.MouseEvent e)
+			{
+				showDisclaimer();
+			}
+		});
 		footer.add(dev, BorderLayout.WEST);
 		JButton bugReport = new RoundedButton("Report bug");
 		bugReport.setFont(FontManager.getRunescapeSmallFont());
