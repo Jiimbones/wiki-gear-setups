@@ -49,6 +49,12 @@ public class InventoryResolver
 	public InventoryResolution resolve(InventorySetup setup, Set<Integer> ownedIds,
 		MissingGearBehavior missingBehavior, List<GearSetup> rankedSetups)
 	{
+		return resolve(setup, ownedIds, missingBehavior, rankedSetups, PickStrategy.BEST_OWNED);
+	}
+
+	public InventoryResolution resolve(InventorySetup setup, Set<Integer> ownedIds,
+		MissingGearBehavior missingBehavior, List<GearSetup> rankedSetups, PickStrategy strategy)
+	{
 		List<InventoryPick> picks = new ArrayList<>();
 		List<InventoryPick> runePicks = new ArrayList<>();
 		Set<String> unresolved = new LinkedHashSet<>();
@@ -59,13 +65,13 @@ public class InventoryResolver
 		for (int i = 0; i < slots.size(); i++)
 		{
 			resolveOne(slots.get(i), i, ownedIds, missingBehavior, rankedSetups,
-				picks, unresolved, missingNames, missing);
+				picks, unresolved, missingNames, missing, strategy);
 		}
 		List<String> runes = setup.getRunes();
 		for (int i = 0; i < runes.size(); i++)
 		{
 			resolveOne(runes.get(i), i, ownedIds, missingBehavior, Collections.emptyList(),
-				runePicks, unresolved, missingNames, missing);
+				runePicks, unresolved, missingNames, missing, strategy);
 		}
 
 		return new InventoryResolution(setup, picks, runePicks,
@@ -74,7 +80,7 @@ public class InventoryResolver
 
 	private void resolveOne(String name, int slot, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
 		List<GearSetup> rankedSetups, List<InventoryPick> out, Set<String> unresolved,
-		Set<String> missingNames, int[] missing)
+		Set<String> missingNames, int[] missing, PickStrategy strategy)
 	{
 		if (name.isEmpty())
 		{
@@ -83,7 +89,8 @@ public class InventoryResolver
 		Optional<ResolvedItem> resolved = itemResolver.resolve(name);
 		if (!resolved.isPresent())
 		{
-			resolvePlaceholder(name, slot, ownedIds, missingBehavior, out, unresolved, missingNames, missing);
+			resolvePlaceholder(name, slot, ownedIds, missingBehavior, out, unresolved,
+				missingNames, missing, strategy);
 			return;
 		}
 
@@ -91,6 +98,16 @@ public class InventoryResolver
 		if (ownedId != null)
 		{
 			out.add(new InventoryPick(slot, ownedId, true));
+			return;
+		}
+
+		// showing the wiki's own list: place it unowned and count it, rather
+		// than substituting something the player happens to have
+		if (strategy == PickStrategy.TOP_RECOMMENDATION)
+		{
+			missing[0]++;
+			missingNames.add(name);
+			out.add(new InventoryPick(slot, resolved.get().getPrimaryId(), false));
 			return;
 		}
 
@@ -170,7 +187,7 @@ public class InventoryResolver
 	 */
 	private void resolvePlaceholder(String name, int slot, Set<Integer> ownedIds,
 		MissingGearBehavior missingBehavior, List<InventoryPick> out, Set<String> unresolved,
-		Set<String> missingNames, int[] missing)
+		Set<String> missingNames, int[] missing, PickStrategy strategy)
 	{
 		List<String> candidates = PlaceholderItems.candidatesFor(name);
 		if (candidates.isEmpty())
@@ -190,6 +207,20 @@ public class InventoryResolver
 			if (firstResolvable == null)
 			{
 				firstResolvable = resolved.get();
+				// the wiki's own answer for a placeholder is its best
+				// candidate, owned or not
+				if (strategy == PickStrategy.TOP_RECOMMENDATION)
+				{
+					Integer owned = firstOwned(firstResolvable, ownedIds);
+					if (owned == null)
+					{
+						missing[0]++;
+						missingNames.add(name);
+					}
+					out.add(new InventoryPick(slot,
+						owned != null ? owned : firstResolvable.getPrimaryId(), owned != null));
+					return;
+				}
 			}
 			Integer ownedId = firstOwned(resolved.get(), ownedIds);
 			if (ownedId != null)

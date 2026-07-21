@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-21: "Show wiki BIS" mode — `PickStrategy` on both resolvers shows/imports the wiki's own first choice with owned/unowned marking; `-bis` tag suffix and relabelled import button prevent overwriting the adaptive tab; 137 tests green.
+- 2026-07-21: Fixed a fresh-clone test failure — `.gitattributes` converted frozen fixtures to CRLF and the tabber-label pattern captured the stray `\r`; parsers now normalise line endings at entry (found by verifying the backup restore).
 - 2026-07-20: Adaptive inventory — unowned switch items fall back through gear ladders, unowned consumables substitute the best owned of their class (ConsumableGroups); divine potions satisfy base potion recs; applies in example and classic modes; 127 tests green.
 - 2026-07-20: Example-mode personalization — unowned example items fall back through the page's ranked ladders (ExampleGearEnricher); source selector (Example setups / Gear by style) on pages with both formats; 123 tests green.
 - 2026-07-20: Raid example setups — ExampleSetupParser reads the raid pages' complete gear+inventory columns (ToA/CoX tier columns, ToB guide mode/tier/role hierarchy) into cascading dropdowns with paired inventory (no separate inv choice); Guide: page discovery; scrapped the shelved best-per-style idea; 119 tests green.

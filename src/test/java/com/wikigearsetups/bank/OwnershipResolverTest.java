@@ -203,6 +203,101 @@ public class OwnershipResolverTest
 		assertFalse(r.getPicks().get(0).isOwned());
 	}
 
+	// --- PickStrategy.TOP_RECOMMENDATION (the "show wiki BIS" mode) ---
+
+	@Test
+	public void topRecommendationBeatsAnOwnedLowerAlternative()
+	{
+		GearSetup s = setup(EquipSlot.NECK,
+			new RankedItem("Occult necklace", 1, null),
+			new RankedItem("Amulet of fury", 2, null));
+		SetupResolution r = resolver.resolve(s, owned(AMULET_OF_FURY), MissingGearBehavior.OMIT,
+			false, PickStrategy.TOP_RECOMMENDATION);
+
+		SlotPick pick = r.getPicks().get(0);
+		assertEquals(OCCULT_NECKLACE, pick.getItemId());
+		assertFalse("the wiki's pick is not owned here", pick.isOwned());
+		assertTrue(pick.isTopRecommendation());
+	}
+
+	@Test
+	public void topRecommendationPlacesTheOwnedVariantWhenOwned()
+	{
+		GearSetup s = setup(EquipSlot.BODY, new RankedItem("Karil's leathertop", 1, null));
+		SetupResolution r = resolver.resolve(s, owned(KARILS_LEATHERTOP_100),
+			MissingGearBehavior.OMIT, false, PickStrategy.TOP_RECOMMENDATION);
+
+		SlotPick pick = r.getPicks().get(0);
+		assertEquals("place the copy the player actually has", KARILS_LEATHERTOP_100, pick.getItemId());
+		assertTrue(pick.isOwned());
+	}
+
+	@Test
+	public void topRecommendationPlacesUnownedItemsRegardlessOfMissingConfig()
+	{
+		GearSetup s = setup(EquipSlot.NECK, new RankedItem("Occult necklace", 1, null));
+		// OMIT would normally drop an unowned slot entirely
+		SetupResolution r = resolver.resolve(s, owned(), MissingGearBehavior.OMIT,
+			false, PickStrategy.TOP_RECOMMENDATION);
+
+		assertEquals(1, r.getPicks().size());
+		assertFalse(r.getPicks().get(0).isOwned());
+	}
+
+	@Test
+	public void ownedSetPieceSurvivesInTopRecommendationMode()
+	{
+		// the mirror of ownedSetPieceStillSkippedWhenSetNotWornInLayout: set
+		// gating is ownership-derived, so the BIS view must not apply it
+		int bandos = 11832;
+		OwnershipResolver r = new OwnershipResolver(new ItemResolver(FakeItemNameIndex.of(
+			BLOOD_MOON_HELM, "Blood moon helm",
+			BLOOD_MOON_CHEST, "Blood moon chestplate",
+			BLOOD_MOON_TASSETS, "Blood moon tassets",
+			DUAL_MACUAHUITL, "Dual macuahuitl",
+			NEITIZNOT_FACEGUARD, "Neitiznot faceguard",
+			bandos, "Bandos chestplate")));
+
+		Map<EquipSlot, List<RankedItem>> slots = new EnumMap<>(EquipSlot.class);
+		slots.put(EquipSlot.HEAD, Arrays.asList(
+			new RankedItem("Blood moon helm", 1, FULL_SET_NOTE),
+			new RankedItem("Neitiznot faceguard", 2, null)));
+		slots.put(EquipSlot.BODY, Arrays.asList(
+			new RankedItem("Bandos chestplate", 1, null),
+			new RankedItem("Blood moon chestplate", 2, FULL_SET_NOTE)));
+		GearSetup s = new GearSetup("Test", slots);
+
+		SetupResolution resolution = r.resolve(s,
+			owned(BLOOD_MOON_HELM, BLOOD_MOON_CHEST, BLOOD_MOON_TASSETS, DUAL_MACUAHUITL,
+				NEITIZNOT_FACEGUARD, bandos),
+			MissingGearBehavior.OMIT, false, PickStrategy.TOP_RECOMMENDATION);
+
+		assertEquals(BLOOD_MOON_HELM, resolution.getPicks().get(0).getItemId());
+		assertTrue(resolution.getPicks().get(0).isOwned());
+	}
+
+	@Test
+	public void slayerGatingStillAppliesInTopRecommendationMode()
+	{
+		int slayerHelm = 11864;
+		OwnershipResolver r = new OwnershipResolver(new ItemResolver(FakeItemNameIndex.of(
+			slayerHelm, "Slayer helmet",
+			NEITIZNOT_FACEGUARD, "Neitiznot faceguard")));
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Slayer helmet", 1, "If on a Zulrah slayer boss task"),
+			new RankedItem("Neitiznot faceguard", 2, null));
+
+		SetupResolution off = r.resolve(s, owned(), MissingGearBehavior.OMIT,
+			false, PickStrategy.TOP_RECOMMENDATION);
+		assertEquals("slayer-only item skipped when not on task",
+			NEITIZNOT_FACEGUARD, off.getPicks().get(0).getItemId());
+
+		SetupResolution on = r.resolve(s, owned(), MissingGearBehavior.OMIT,
+			true, PickStrategy.TOP_RECOMMENDATION);
+		assertEquals("and taken when the player says they are on task",
+			slayerHelm, on.getPicks().get(0).getItemId());
+	}
+
 	@Test
 	public void twoHandedWeaponDropsShieldPick()
 	{

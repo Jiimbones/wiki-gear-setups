@@ -36,8 +36,15 @@ public class OwnershipResolver
 		this.itemResolver = itemResolver;
 	}
 
+	/** Adaptive resolution (BEST_OWNED). */
 	public SetupResolution resolve(GearSetup setup, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
 		boolean assumeSlayerTask)
+	{
+		return resolve(setup, ownedIds, missingBehavior, assumeSlayerTask, PickStrategy.BEST_OWNED);
+	}
+
+	public SetupResolution resolve(GearSetup setup, Set<Integer> ownedIds, MissingGearBehavior missingBehavior,
+		boolean assumeSlayerTask, PickStrategy strategy)
 	{
 		Map<EquipSlot, List<String>> unresolved = new EnumMap<>(EquipSlot.class);
 		Map<EquipSlot, Set<String>> excluded = new EnumMap<>(EquipSlot.class);
@@ -47,7 +54,7 @@ public class OwnershipResolver
 		{
 			excluded.put(entry.getKey(), new HashSet<>());
 			SlotPick pick = resolveSlot(entry.getKey(), entry.getValue(), ownedIds, missingBehavior,
-				assumeSlayerTask, excluded.get(entry.getKey()), unresolved);
+				assumeSlayerTask, excluded.get(entry.getKey()), unresolved, strategy);
 			if (pick != null)
 			{
 				pickBySlot.put(entry.getKey(), pick);
@@ -58,7 +65,9 @@ public class OwnershipResolver
 		// owning the full blood moon set doesn't justify the helm when better
 		// body/legs win their slots. Excluding a piece can invalidate another
 		// set piece, so iterate to a fixpoint (exclusions only grow).
-		boolean changed = true;
+		// Ownership-derived, so it has no meaning when showing the wiki's own
+		// pick — an owned set piece must stay put there.
+		boolean changed = strategy == PickStrategy.BEST_OWNED;
 		while (changed)
 		{
 			changed = false;
@@ -79,7 +88,7 @@ public class OwnershipResolver
 				}
 				excluded.get(entry.getKey()).add(item.getName());
 				SlotPick replacement = resolveSlot(entry.getKey(), entry.getValue(), ownedIds,
-					missingBehavior, assumeSlayerTask, excluded.get(entry.getKey()), null);
+					missingBehavior, assumeSlayerTask, excluded.get(entry.getKey()), null, strategy);
 				if (replacement != null)
 				{
 					pickBySlot.put(entry.getKey(), replacement);
@@ -117,8 +126,13 @@ public class OwnershipResolver
 	 */
 	private SlotPick resolveSlot(EquipSlot slot, List<RankedItem> alternatives, Set<Integer> ownedIds,
 		MissingGearBehavior missingBehavior, boolean assumeSlayerTask,
-		Set<String> excludedNames, Map<EquipSlot, List<String>> unresolved)
+		Set<String> excludedNames, Map<EquipSlot, List<String>> unresolved, PickStrategy strategy)
 	{
+		if (strategy == PickStrategy.TOP_RECOMMENDATION)
+		{
+			return topRecommendation(slot, alternatives, ownedIds, assumeSlayerTask, unresolved);
+		}
+
 		RankedItem bestResolvable = null;
 		ResolvedItem bestResolved = null;
 		// tracked ignoring the set gate, so a slot whose every alternative
@@ -176,6 +190,38 @@ public class OwnershipResolver
 		if (missingBehavior == MissingGearBehavior.SHOW_BEST_UNOWNED && bestResolvable != null)
 		{
 			return new SlotPick(slot, bestResolvable, bestResolved.getPrimaryId(), false, true);
+		}
+		return null;
+	}
+
+	/**
+	 * The wiki's own first choice for the slot, ownership only deciding
+	 * whether the pick is flagged owned and which variant id is placed —
+	 * an owned recolour/upgrade still lands as the player's copy so the tab
+	 * stays usable. Set gating is deliberately not consulted: it exists to
+	 * adapt to what the player owns, which this strategy ignores.
+	 */
+	private SlotPick topRecommendation(EquipSlot slot, List<RankedItem> alternatives, Set<Integer> ownedIds,
+		boolean assumeSlayerTask, Map<EquipSlot, List<String>> unresolved)
+	{
+		for (RankedItem candidate : alternatives)
+		{
+			if (!assumeSlayerTask && isSlayerTaskConditional(candidate))
+			{
+				continue;
+			}
+			Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+			if (!resolved.isPresent())
+			{
+				if (unresolved != null)
+				{
+					unresolved.computeIfAbsent(slot, k -> new ArrayList<>()).add(candidate.getName());
+				}
+				continue;
+			}
+			Integer ownedId = firstOwned(resolved.get(), ownedIds);
+			return new SlotPick(slot, candidate,
+				ownedId != null ? ownedId : resolved.get().getPrimaryId(), ownedId != null, true);
 		}
 		return null;
 	}

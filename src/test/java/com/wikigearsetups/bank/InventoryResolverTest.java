@@ -156,6 +156,56 @@ public class InventoryResolverTest
 	}
 
 	@Test
+	public void topRecommendationSkipsConsumableSubstitution()
+	{
+		int monkfish = 7946;
+		InventoryResolver r = new InventoryResolver(new ItemResolver(
+			FakeItemNameIndex.of(SHARK, "Shark", monkfish, "Monkfish")));
+
+		InventoryResolution res = r.resolve(setup("Shark"), Collections.singleton(monkfish),
+			MissingGearBehavior.OMIT, Collections.emptyList(), PickStrategy.TOP_RECOMMENDATION);
+
+		assertEquals("the wiki says shark, so show shark", SHARK, res.getPicks().get(0).getItemId());
+		assertFalse(res.getPicks().get(0).isOwned());
+		assertEquals(Collections.singletonList("Shark"), res.getMissingNames());
+	}
+
+	@Test
+	public void topRecommendationSkipsGearLadderFallback()
+	{
+		int blowpipe = 12926;
+		int rcb = 9185;
+		InventoryResolver r = new InventoryResolver(new ItemResolver(
+			FakeItemNameIndex.of(blowpipe, "Toxic blowpipe", rcb, "Rune crossbow")));
+
+		Map<EquipSlot, List<RankedItem>> slots = new EnumMap<>(EquipSlot.class);
+		slots.put(EquipSlot.WEAPON, Arrays.asList(
+			new RankedItem("Toxic blowpipe", 1, null),
+			new RankedItem("Rune crossbow", 2, null)));
+
+		InventoryResolution res = r.resolve(setup("Toxic blowpipe"), Collections.singleton(rcb),
+			MissingGearBehavior.OMIT, Collections.singletonList(new GearSetup("Ranged", slots)),
+			PickStrategy.TOP_RECOMMENDATION);
+
+		assertEquals(blowpipe, res.getPicks().get(0).getItemId());
+		assertFalse(res.getPicks().get(0).isOwned());
+	}
+
+	@Test
+	public void topRecommendationTakesFirstPlaceholderCandidateNotTheOwnedOne()
+	{
+		// "Cheap food" prefers Shark; owning only karambwan must not change
+		// what the BIS view shows
+		InventoryResolution res = resolver.resolve(setup("Cheap food"),
+			Collections.singleton(KARAMBWAN), MissingGearBehavior.OMIT,
+			Collections.emptyList(), PickStrategy.TOP_RECOMMENDATION);
+
+		assertEquals(1, res.getPicks().size());
+		assertEquals(SHARK, res.getPicks().get(0).getItemId());
+		assertFalse(res.getPicks().get(0).isOwned());
+	}
+
+	@Test
 	public void missingItemsAreNamed()
 	{
 		InventoryResolution r = resolver.resolve(setup("Shark", "Cooked karambwan", "Shark"),

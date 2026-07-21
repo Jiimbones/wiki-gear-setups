@@ -7,6 +7,7 @@ import com.wikigearsetups.bank.InventoryPick;
 import com.wikigearsetups.bank.InventoryResolution;
 import com.wikigearsetups.bank.InventoryResolver;
 import com.wikigearsetups.bank.OwnershipResolver;
+import com.wikigearsetups.bank.PickStrategy;
 import com.wikigearsetups.bank.SetupResolution;
 import com.wikigearsetups.bank.SlotPick;
 import com.wikigearsetups.items.ItemNameIndex;
@@ -51,6 +52,7 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -121,6 +123,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JComboBox<String> tierCombo = new JComboBox<>();
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
+	private final JCheckBox recommendedToggle = new JCheckBox("Show wiki BIS (ignore my gear)");
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
 	private final FlatTextField tagNameField = new FlatTextField();
@@ -332,6 +335,23 @@ public class WikiGearSetupsPanel extends PluginPanel
 		inventoryCombo.setVisible(false);
 		flow.add(inventoryCombo);
 		flow.add(Box.createVerticalStrut(8));
+
+		recommendedToggle.setAlignmentX(LEFT_ALIGNMENT);
+		recommendedToggle.setOpaque(false);
+		recommendedToggle.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		recommendedToggle.setFocusPainted(false);
+		recommendedToggle.setToolTipText("Show the wiki's own first choice for every slot, "
+			+ "marking what you own. Also changes what Import writes.");
+		recommendedToggle.addActionListener(e ->
+		{
+			userEditedTag = false;
+			userEditedIcon = false;
+			updateImportLabel();
+			resolveSelection();
+		});
+		recommendedToggle.setVisible(false);
+		flow.add(recommendedToggle);
+		flow.add(Box.createVerticalStrut(4));
 
 		gridPanel.setAlignmentX(LEFT_ALIGNMENT);
 		gridPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -700,6 +720,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		userEditedTag = false;
 		userEditedIcon = false;
 		wikiLinkButton.setVisible(true);
+		recommendedToggle.setVisible(true);
+		updateImportLabel();
 
 		// both formats present: the player chooses; examples default (raids)
 		updatingCombos = true;
@@ -775,6 +797,13 @@ public class WikiGearSetupsPanel extends PluginPanel
 		status(pageSetups.size() + (pageSetups.size() == 1 ? " setup on " : " setups on ")
 			+ displayTitle(currentPageTitle), null);
 		resolveSelection();
+	}
+
+	/** The button must say what it will actually write — the toggle changes that. */
+	private void updateImportLabel()
+	{
+		importButton.setText(recommendedToggle.isSelected()
+			? "Import BIS as bank tag" : "Import as bank tag");
 	}
 
 	private static DefaultComboBoxModel<String> toModel(List<String> values)
@@ -953,13 +982,15 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 			Set<Integer> owned = bankStateCache.ownedItemIds();
 			boolean hasSnapshot = bankStateCache.hasSnapshot();
+			PickStrategy strategy = recommendedToggle.isSelected()
+				? PickStrategy.TOP_RECOMMENDATION : PickStrategy.BEST_OWNED;
 
 			List<SetupResolution> resolutions = new ArrayList<>();
 			List<List<SlotPick>> gearBlocks = new ArrayList<>();
 			for (GearSetup setup : selectedSetups)
 			{
 				SetupResolution r = ownershipResolver.resolve(setup, owned,
-					config.missingGearBehavior(), config.assumeSlayerTask());
+					config.missingGearBehavior(), config.assumeSlayerTask(), strategy);
 				List<SlotPick> picks = OwnershipResolver.dropShieldForTwoHanded(r.getPicks(), this::isTwoHanded);
 				if (picks != r.getPicks())
 				{
@@ -970,7 +1001,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 			InventoryResolution invResolution = selectedInventory == null
 				? null
-				: inventoryResolver.resolve(selectedInventory, owned, config.missingGearBehavior(), pageSetups);
+				: inventoryResolver.resolve(selectedInventory, owned, config.missingGearBehavior(),
+					pageSetups, strategy);
 
 			List<InventoryPick> invPicks = invResolution == null
 				? Collections.emptyList() : invResolution.getPicks();
@@ -994,13 +1026,18 @@ public class WikiGearSetupsPanel extends PluginPanel
 			{
 				excluded.add(pick.getItemId());
 			}
+			// owned alternates are an owned-mode concept — the BIS view shows
+			// the wiki's list and nothing else
 			List<Integer> extras = new ArrayList<>();
-			for (GearSetup setup : selectedSetups)
+			if (strategy == PickStrategy.BEST_OWNED)
 			{
-				for (int id : ownershipResolver.ownedAlternatives(setup, owned, config.assumeSlayerTask(), excluded))
+				for (GearSetup setup : selectedSetups)
 				{
-					extras.add(id);
-					excluded.add(id);
+					for (int id : ownershipResolver.ownedAlternatives(setup, owned, config.assumeSlayerTask(), excluded))
+					{
+						extras.add(id);
+						excluded.add(id);
+					}
 				}
 			}
 
@@ -1088,7 +1125,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 				if (!pick.isOwned())
 				{
 					color = MISSING;
-					suffix = "  (goal)";
+					suffix = recommendedToggle.isSelected() ? "  (not owned)" : "  (goal)";
 					goals++;
 				}
 				else if (pick.isTopRecommendation())
@@ -1105,7 +1142,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 			for (EquipSlot slot : resolution.getEmptySlots())
 			{
-				addRow(slotName(slot) + ": nothing owned", ColorScheme.MEDIUM_GRAY_COLOR, false);
+				addRow(slotName(slot) + (recommendedToggle.isSelected() ? ": nothing recognized" : ": nothing owned"),
+					ColorScheme.MEDIUM_GRAY_COLOR, false);
 			}
 			for (Map.Entry<EquipSlot, List<String>> entry : resolution.getUnresolvedNames().entrySet())
 			{
@@ -1167,7 +1205,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 		if (goals > 0)
 		{
-			summary.append(", ").append(goals).append(" goals");
+			summary.append(", ").append(goals).append(recommendedToggle.isSelected() ? " not owned" : " goals");
 		}
 		status(summary.toString(), null);
 
@@ -1312,6 +1350,12 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			styleLabel = resolutions.get(0).getSetup().getStyleLabel();
 		}
+		// a BIS tab is a different thing from your gear tab — default it to a
+		// different tag so importing one never silently overwrites the other
+		if (recommendedToggle.isSelected())
+		{
+			styleLabel = styleLabel + " bis";
+		}
 		return TagNames.build(displayTitle(currentPageTitle), styleLabel);
 	}
 
@@ -1405,6 +1449,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		tierCombo.setVisible(false);
 		setupCombo.setVisible(false);
 		inventoryCombo.setVisible(false);
+		recommendedToggle.setVisible(false);
 		wikiLinkButton.setVisible(false);
 		tagNameField.setText("");
 		iconCombo.setModel(new DefaultComboBoxModel<>());
