@@ -102,6 +102,23 @@ public class ExampleSetupParserTest
 	}
 
 	@Test
+	public void crlfInputParsesIdenticallyToLf() throws IOException
+	{
+		String lf = fixture("toa-strategies");
+		List<ExampleSetup> fromLf = parser.parse(lf);
+		List<ExampleSetup> fromCrlf = parser.parse(lf.replace("\n", "\r\n"));
+
+		assertEquals(fromLf.size(), fromCrlf.size());
+		for (int i = 0; i < fromLf.size(); i++)
+		{
+			assertEquals(fromLf.get(i).getLabel(), fromCrlf.get(i).getLabel());
+			assertEquals(fromLf.get(i).getPath(), fromCrlf.get(i).getPath());
+			assertEquals(fromLf.get(i).getGear().getSlots().size(),
+				fromCrlf.get(i).getGear().getSlots().size());
+		}
+	}
+
+	@Test
 	public void pagesWithoutExampleTablesYieldNothing() throws IOException
 	{
 		assertTrue(parser.parse(fixture("vorkath-strategies")).isEmpty());

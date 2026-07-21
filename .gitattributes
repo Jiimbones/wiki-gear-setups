@@ -2,3 +2,5 @@
 *.jar binary
 gradlew text eol=lf
 gradlew.bat text eol=crlf
+# frozen wiki API responses — keep byte-identical to what the API served
+*.wikitext -text

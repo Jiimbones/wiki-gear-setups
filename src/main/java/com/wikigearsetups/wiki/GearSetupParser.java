@@ -27,13 +27,14 @@ public class GearSetupParser
 	private static final Pattern PLAIN_LINK = Pattern.compile("\\[\\[([^\\]|]*)\\]\\]");
 	private static final Pattern NESTED_TEMPLATE = Pattern.compile("\\{\\{[^{}]*\\}\\}");
 
-	public List<GearSetup> parse(String wikitext)
+	public List<GearSetup> parse(String rawWikitext)
 	{
 		List<GearSetup> setups = new ArrayList<>();
-		if (wikitext == null || wikitext.isEmpty())
+		if (rawWikitext == null || rawWikitext.isEmpty())
 		{
 			return setups;
 		}
+		String wikitext = normalizeLineEndings(rawWikitext);
 
 		int i = 0;
 		while ((i = wikitext.indexOf("{{", i)) >= 0)
@@ -355,6 +356,16 @@ public class GearSetupParser
 	 * Reduces wiki markup to display text: [[a|b]] -> b, [[a]] -> a, nested
 	 * templates dropped, br tags to spaces, whitespace collapsed.
 	 */
+	/**
+	 * Line-based patterns (tabber labels, headings, table markup) must not
+	 * see stray carriage returns. The wiki API serves LF, but a fixture
+	 * checked out with CRLF — or any future caller — must parse identically.
+	 */
+	static String normalizeLineEndings(String s)
+	{
+		return s.indexOf('\r') < 0 ? s : s.replace("\r\n", "\n").replace('\r', '\n');
+	}
+
 	static String stripMarkup(String s)
 	{
 		String out = s;

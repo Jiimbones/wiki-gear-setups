@@ -49,10 +49,14 @@ public class ExampleSetupParser
 
 	private final InventoryParser inventoryParser = new InventoryParser();
 
-	public List<ExampleSetup> parse(String wikitext)
+	public List<ExampleSetup> parse(String rawWikitext)
 	{
 		List<ExampleSetup> setups = new ArrayList<>();
-		String[] lines = wikitext.split("\n", -1);
+		if (rawWikitext == null || rawWikitext.isEmpty())
+		{
+			return setups;
+		}
+		String[] lines = GearSetupParser.normalizeLineEndings(rawWikitext).split("\n", -1);
 		String h2 = null;
 		String h3 = null;
 

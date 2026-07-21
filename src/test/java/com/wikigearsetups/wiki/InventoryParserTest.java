@@ -32,6 +32,26 @@ public class InventoryParserTest
 		assertEquals("Void Mage and Ranged", setups.get(1).getLabel());
 	}
 
+	/**
+	 * A fresh clone on Windows checks fixtures out with CRLF; line-anchored
+	 * patterns must not capture the stray carriage return.
+	 */
+	@Test
+	public void crlfInputParsesIdenticallyToLf() throws IOException
+	{
+		String lf = fixture("zulrah-strategies");
+		List<InventorySetup> fromLf = parser.parse(lf);
+		List<InventorySetup> fromCrlf = parser.parse(lf.replace("\n", "\r\n"));
+
+		assertEquals(fromLf.size(), fromCrlf.size());
+		for (int i = 0; i < fromLf.size(); i++)
+		{
+			assertEquals(fromLf.get(i).getLabel(), fromCrlf.get(i).getLabel());
+			assertEquals(fromLf.get(i).getSlots(), fromCrlf.get(i).getSlots());
+			assertEquals(fromLf.get(i).getRunes(), fromCrlf.get(i).getRunes());
+		}
+	}
+
 	@Test
 	public void slotsPreserveWikiOrder() throws IOException
 	{

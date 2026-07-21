@@ -47,13 +47,14 @@ public class InventoryParser
 		}
 	}
 
-	public List<InventorySetup> parse(String wikitext)
+	public List<InventorySetup> parse(String rawWikitext)
 	{
 		List<Pending> pending = new ArrayList<>();
-		if (wikitext == null || wikitext.isEmpty())
+		if (rawWikitext == null || rawWikitext.isEmpty())
 		{
 			return Collections.emptyList();
 		}
+		String wikitext = GearSetupParser.normalizeLineEndings(rawWikitext);
 
 		int i = 0;
 		while ((i = wikitext.indexOf("{{", i)) >= 0)
