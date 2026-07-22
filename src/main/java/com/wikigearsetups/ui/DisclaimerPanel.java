@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
@@ -37,13 +38,6 @@ class DisclaimerPanel extends JPanel
 	private static final Color HEADING = ColorScheme.BRAND_ORANGE;
 	/** RuneLite reserves 17px for the sidebar scrollbar; leave clearance for it. */
 	private static final int SIDE_PADDING = 24;
-	/**
-	 * Hard ceiling on the text column. The container reports 226px while the
-	 * visible column is plainly narrower — the panel is laid out wider than
-	 * the sidebar actually shows — so the measured width is treated as an
-	 * upper bound to shrink from, never as the truth.
-	 */
-	private static final int MAX_TEXT_WIDTH = 168;
 
 	private final List<Paragraph> paragraphs = new ArrayList<>();
 	private final JPanel content;
@@ -162,26 +156,59 @@ class DisclaimerPanel extends JPanel
 
 	/**
 	 * Re-wraps every paragraph to the width the text column actually has.
-	 * The label's maximum size is pinned to the same value so the layout
-	 * cannot hand it more room than the text was wrapped for — that mismatch
-	 * is what clipped the last character of every line.
+	 *
+	 * The lines are broken with FontMetrics rather than a CSS {@code width},
+	 * because Swing's HTML renderer does not treat a CSS pixel as one of the
+	 * component's pixels — under display scaling a "168px" column paints
+	 * around 218px wide, which is what kept clipping the end of every line
+	 * no matter how the container was measured. FontMetrics measures in the
+	 * same space the text is painted in, so a line that measures as fitting
+	 * does fit.
 	 */
 	private void reflow()
 	{
-		int width = Math.min(content.getWidth() - SIDE_PADDING, MAX_TEXT_WIDTH);
+		int width = content.getWidth() - SIDE_PADDING;
 		if (width <= 0 || width == renderedWidth)
 		{
 			return;
 		}
 		renderedWidth = width;
-		log.debug("Disclaimer reflow: panel={} content={} wrapping at {}",
-			getWidth(), content.getWidth(), width);
 		for (Paragraph paragraph : paragraphs)
 		{
-			paragraph.label.setText("<html><div style='width:" + width + "px'>"
-				+ paragraph.text.replace("<", "&lt;") + "</div></html>");
-			paragraph.label.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
+			JLabel label = paragraph.label;
+			label.setText(wrapToWidth(paragraph.text, label.getFontMetrics(label.getFont()), width));
+			label.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
 		}
 		revalidate();
+	}
+
+	/** Greedy word wrap producing explicit &lt;br&gt; breaks — no CSS widths involved. */
+	static String wrapToWidth(String text, FontMetrics metrics, int maxWidth)
+	{
+		StringBuilder html = new StringBuilder("<html>");
+		StringBuilder line = new StringBuilder();
+		for (String word : text.split(" "))
+		{
+			if (word.isEmpty())
+			{
+				continue;
+			}
+			String candidate = line.length() == 0 ? word : line + " " + word;
+			if (line.length() > 0 && metrics.stringWidth(candidate) > maxWidth)
+			{
+				html.append(escape(line.toString())).append("<br>");
+				line = new StringBuilder(word);
+			}
+			else
+			{
+				line = new StringBuilder(candidate);
+			}
+		}
+		return html.append(escape(line.toString())).append("</html>").toString();
+	}
+
+	private static String escape(String s)
+	{
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
 	}
 }
