@@ -11,10 +11,12 @@ import com.wikigearsetups.bank.PickStrategy;
 import com.wikigearsetups.bank.SetupResolution;
 import com.wikigearsetups.bank.SlotPick;
 import com.wikigearsetups.items.ItemNameIndex;
+import com.wikigearsetups.items.ItemNames;
 import com.wikigearsetups.layout.BankTagImporter;
 import com.wikigearsetups.layout.LayoutBuilder;
 import com.wikigearsetups.layout.TagNames;
 import com.wikigearsetups.wiki.EquipSlot;
+import com.wikigearsetups.wiki.DropsParser;
 import com.wikigearsetups.wiki.ExampleSetup;
 import com.wikigearsetups.wiki.ExampleSetupParser;
 import com.wikigearsetups.wiki.GearSetup;
@@ -109,6 +111,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final GearSetupParser parser = new GearSetupParser();
 	private final InventoryParser inventoryParser = new InventoryParser();
 	private final ExampleSetupParser exampleSetupParser = new ExampleSetupParser();
+	private final DropsParser dropsParser = new DropsParser();
 	private final OwnershipResolver ownershipResolver;
 	private final InventoryResolver inventoryResolver;
 	private final BankStateCache bankStateCache;
@@ -137,7 +140,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
 	private final FlatTextField tagNameField = new FlatTextField();
-	private final JComboBox<IconOption> iconCombo = new JComboBox<>();
+	private final IconPicker iconPicker;
 	private final JButton importButton = RoundedButton.accent("Import as bank tag");
 
 	private List<SearchResult> searchResults = Collections.emptyList();
@@ -146,6 +149,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private List<GearSetup> pageSetups = Collections.emptyList();
 	private List<InventorySetup> pageInventories = Collections.emptyList();
 	private List<ExampleSetup> pageExamples = Collections.emptyList();
+	// boss uniques/pet offered as tab icons; empty until the drop table is seen
+	private List<String> pageDropNames = Collections.emptyList();
+	private Set<String> petNames = Collections.emptySet();
 	private List<GearSetup> currentSetups;
 	// non-empty = example mode: complete gear+inventory columns from the page,
 	// chosen through the mode/tier/label cascade instead of the classic combos
@@ -167,6 +173,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	{
 		super(false);
 		this.configManager = configManager;
+		this.iconPicker = new IconPicker(itemManager);
 		this.wikiClient = wikiClient;
 		this.ownershipResolver = ownershipResolver;
 		this.inventoryResolver = inventoryResolver;
@@ -402,17 +409,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		tagNameField.setPreferredSize(new Dimension(0, 26));
 		flow.add(labeledRow("Name", tagNameField));
 		flow.add(Box.createVerticalStrut(4));
-		iconCombo.setRenderer(new IconOptionRenderer());
-		iconCombo.setMaximumRowCount(12);
-		styleCombo(iconCombo);
-		iconCombo.addActionListener(e ->
-		{
-			if (!updatingCombos)
-			{
-				userEditedIcon = true;
-			}
-		});
-		flow.add(labeledRow("Icon", iconCombo));
+		iconPicker.setOnUserChange(() -> userEditedIcon = true);
+		flow.add(labeledRow("Icon", iconPicker));
 		flow.add(Box.createVerticalStrut(8));
 		importButton.setEnabled(false);
 		importButton.setToolTipText("Creates or updates a bank tag tab with this layout");
@@ -591,56 +589,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 	}
 
-	/** A pickable tab icon: item id + display name, rendered with its sprite. */
-	private static final class IconOption
-	{
-		private final int itemId;
-		private final String name;
-
-		IconOption(int itemId, String name)
-		{
-			this.itemId = itemId;
-			this.name = name;
-		}
-
-		@Override
-		public String toString()
-		{
-			return name;
-		}
-
-		@Override
-		public boolean equals(Object o)
-		{
-			return o instanceof IconOption && ((IconOption) o).itemId == itemId;
-		}
-
-		@Override
-		public int hashCode()
-		{
-			return itemId;
-		}
-	}
-
-	private final class IconOptionRenderer extends DarkListRenderer
-	{
-		@Override
-		public Component getListCellRendererComponent(JList<?> list, Object value,
-			int index, boolean isSelected, boolean cellHasFocus)
-		{
-			JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-			if (value instanceof IconOption)
-			{
-				IconOption option = (IconOption) value;
-				label.setText(option.name);
-				AsyncBufferedImage img = itemManager.getImage(option.itemId);
-				label.setIcon(new ImageIcon(img.getScaledInstance(20, 18, Image.SCALE_SMOOTH)));
-				label.setIconTextGap(6);
-			}
-			return label;
-		}
-	}
-
 	private void doSearch()
 	{
 		String query = searchField.getText().trim();
@@ -740,8 +688,83 @@ public class WikiGearSetupsPanel extends PluginPanel
 				return;
 			}
 			List<InventorySetup> inventories = inventoryParser.parse(wikitext);
-			SwingUtilities.invokeLater(() -> showSetups(candidate, setups, inventories, examples));
+			List<String> drops = dropsParser.parse(wikitext);
+			SwingUtilities.invokeLater(() ->
+			{
+				showSetups(candidate, setups, inventories, examples);
+				applyDrops(candidate, drops);
+			});
+			if (drops.isEmpty())
+			{
+				loadDropsFromBasePage(candidate);
+			}
 		});
+	}
+
+	/**
+	 * Setups usually live on a "/Strategies" subpage while the drop table
+	 * stays on the boss's own page, so fall back to it for icon candidates.
+	 */
+	private void loadDropsFromBasePage(String loadedTitle)
+	{
+		String base = basePageTitle(loadedTitle);
+		if (base.equals(loadedTitle))
+		{
+			return;
+		}
+		wikiClient.getPageWikitext(base).whenComplete((wikitext, err) ->
+		{
+			if (err != null)
+			{
+				return;
+			}
+			List<String> drops = dropsParser.parse(wikitext);
+			if (!drops.isEmpty())
+			{
+				SwingUtilities.invokeLater(() -> applyDrops(loadedTitle, drops));
+			}
+		});
+	}
+
+	static String basePageTitle(String title)
+	{
+		String base = title;
+		if (base.startsWith("Guide:"))
+		{
+			base = base.substring("Guide:".length());
+		}
+		if (base.endsWith(" setups"))
+		{
+			base = base.substring(0, base.length() - " setups".length());
+		}
+		int slash = base.indexOf('/');
+		return slash > 0 ? base.substring(0, slash) : base;
+	}
+
+	/** Late-arriving drop data refreshes the icon choices, if the page is still shown. */
+	private void applyDrops(String forPage, List<String> drops)
+	{
+		if (!forPage.equals(currentPageTitle) || drops.isEmpty())
+		{
+			return;
+		}
+		pageDropNames = drops;
+		if (currentResolutions != null)
+		{
+			refreshTagAndIcon(currentResolutions);
+		}
+		wikiClient.petNames().whenComplete((pets, err) -> SwingUtilities.invokeLater(() ->
+		{
+			if (err != null || pets.isEmpty() || !forPage.equals(currentPageTitle))
+			{
+				return;
+			}
+			petNames = pets;
+			if (currentResolutions != null)
+			{
+				refreshTagAndIcon(currentResolutions);
+			}
+		}));
 	}
 
 	private void showSetups(String pageTitle, List<GearSetup> setups, List<InventorySetup> inventories,
@@ -753,6 +776,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		// standalone choices for the ranked setups
 		pageInventories = ExampleSetupParser.withoutExampleInventories(inventories, examples);
 		pageExamples = examples;
+		pageDropNames = Collections.emptyList();
 		userPickedInventory = false;
 		userEditedTag = false;
 		userEditedIcon = false;
@@ -1321,12 +1345,31 @@ public class WikiGearSetupsPanel extends PluginPanel
 			tagNameField.setText(autoTag);
 		}
 
+		// boss drops lead the grid: they're the icons that identify a tab at a
+		// glance, and the pet is the default when we can spot one
 		LinkedHashSet<IconOption> options = new LinkedHashSet<>();
+		IconOption petOption = null;
+		for (String drop : pageDropNames)
+		{
+			List<Integer> ids = itemNameIndex.idsByName(ItemNames.normalize(drop));
+			if (ids.isEmpty())
+			{
+				continue;
+			}
+			IconOption option = new IconOption(ids.get(0), drop);
+			if (petOption == null && petNames.contains(drop))
+			{
+				petOption = option;
+			}
+			options.add(option);
+		}
+
 		int autoIconId = BankTagImporter.iconFor(resolutions);
 		String autoIconName = itemNameIndex.nameById(autoIconId);
-		if (autoIconName != null)
+		IconOption weaponOption = autoIconName == null ? null : new IconOption(autoIconId, autoIconName);
+		if (weaponOption != null)
 		{
-			options.add(new IconOption(autoIconId, autoIconName));
+			options.add(weaponOption);
 		}
 		for (SetupResolution r : resolutions)
 		{
@@ -1351,27 +1394,22 @@ public class WikiGearSetupsPanel extends PluginPanel
 			}
 		}
 
-		IconOption previous = (IconOption) iconCombo.getSelectedItem();
-		updatingCombos = true;
-		DefaultComboBoxModel<IconOption> model = new DefaultComboBoxModel<>();
-		for (IconOption option : options)
-		{
-			model.addElement(option);
-			// repaint when the sprite finishes loading so the picker isn't blank
-			itemManager.getImage(option.itemId).onLoaded(() ->
-				SwingUtilities.invokeLater(iconCombo::repaint));
-		}
-		iconCombo.setModel(model);
+		IconOption previous = iconPicker.getSelected();
+		iconPicker.setOptions(new ArrayList<>(options));
 		if (userEditedIcon && previous != null && options.contains(previous))
 		{
-			iconCombo.setSelectedItem(previous);
+			iconPicker.setSelected(previous);
 		}
-		else if (model.getSize() > 0)
+		else
 		{
-			iconCombo.setSelectedIndex(0);
+			IconOption preferred = petOption != null ? petOption : weaponOption;
+			if (preferred == null && !options.isEmpty())
+			{
+				preferred = options.iterator().next();
+			}
+			iconPicker.setSelected(preferred);
 			userEditedIcon = false;
 		}
-		updatingCombos = false;
 	}
 
 	private String autoTagName(List<SetupResolution> resolutions)
@@ -1445,7 +1483,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		String customTag = TagNames.sanitize(tagNameField.getText());
 		String tag = customTag.isEmpty() ? autoTagName(resolutions) : customTag;
 
-		IconOption selectedIcon = (IconOption) iconCombo.getSelectedItem();
+		IconOption selectedIcon = iconPicker.getSelected();
 		Integer icon = selectedIcon != null ? selectedIcon.itemId : null;
 
 		importButton.setEnabled(false);
@@ -1479,6 +1517,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		pageSetups = Collections.emptyList();
 		pageInventories = Collections.emptyList();
 		pageExamples = Collections.emptyList();
+		pageDropNames = Collections.emptyList();
 		currentExamples = Collections.emptyList();
 		currentInventories = Collections.emptyList();
 		currentResolutions = null;
@@ -1496,7 +1535,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		recommendedToggle.setVisible(false);
 		wikiLinkButton.setVisible(false);
 		tagNameField.setText("");
-		iconCombo.setModel(new DefaultComboBoxModel<>());
+		iconPicker.setOptions(Collections.emptyList());
+		iconPicker.setSelected(null);
 		gridPanel.removeAll();
 		gridPanel.setVisible(false);
 		previewPanel.removeAll();

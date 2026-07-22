@@ -22,6 +22,9 @@ Complete concrete loadouts in a wikitable: `!` header cells label columns; paral
 - Cells may be a bare `|` line with the template starting on the next line — table markup is only meaningful at template depth 0.
 - `ExampleSetupParser`; discovery probes `Guide:<base> setups` before other candidates (missing guide = fast API error).
 
+## Drop tables (tab icons, verified 2026-07-20)
+`{{DropsLine|name=X|quantity=1|rarity=1/1024|...}}` rows grouped under `===` section headings on the **base** page (not `/Strategies`). Only "Uniques" and "Tertiary" are read — the rest is runes/herbs/seeds noise. Pets have no naming pattern (Olmlet, Lil' zik, Vorki), so they're identified against `Category:Pets` via `list=categorymembers` (one memoised call per session; failure just means no pet default). `DropsParser`; base title derived by `WikiGearSetupsPanel.basePageTitle`.
+
 ## Fixture inventory (frozen 2026-07-19, src/test/resources/fixtures/)
 | fixture | templates | notes |
 |---|---|---|
@@ -32,6 +35,7 @@ Complete concrete loadouts in a wikitable: `!` header cells label columns; paral
 | dragon-slayer-ii | 0 | negative path (quest page, no template) |
 | toa-strategies | 5+ example columns | example-setups wikitable, multi-line headers, separate pouch row |
 | tob-setups-guide | 12+ role columns | mode/tier/role hierarchy (frozen 2026-07-20) |
+| zulrah-page | 49 DropsLine rows | base page drop table: Uniques + Tertiary/pet (frozen 2026-07-21) |
 
 ## Parsing rules
 1. Locate `{{Recommended equipment` occurrences via bracket-depth scan (NOT regex-only — templates nest).

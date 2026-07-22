@@ -141,5 +141,13 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] 15 new tests; 142 total green
 - [ ] User visual verification in dev client
 
+## Round 8 (2026-07-21)
+- [x] Disclaimer copy: explains that pages list several options per slot so a layout can occasionally include an ill-fitting item (off-hand beside a 2h weapon) — no blame on the wiki or the plugin; bug line reduced to one sentence
+- [x] **God capes** (investigated, two causes): (a) CoX/ToA write `{{plink|God capes#Imbuing|txt=…|pic=…}}` — a `#` now means the target is a page, so `txt=` becomes the name; `txt`/`pic` also kept as `RankedItem.fallbackNames`, tried only when the primary fails. (b) Every example setup names the saradomin cape, so `ItemAliases` gained bidirectional same-tier `equivalent()` groups: 3 imbued capes + 3 imbued max capes, and the 3 plain capes. Plain still never satisfies imbued
+- [x] **Slayer checkbox**: `assumeSlayerTask` removed from config; contextual checkbox above the BIS toggle, shown only when the resolved setup has a task-conditional recommendation (`OwnershipResolver.hasSlayerConditional`), session-scoped, defaults off. Footnote rule unchanged
+- [x] **Icon picker**: `IconPicker` (button + popup sprite grid, names in tooltips) replaces the named combo; `DropsParser` reads Uniques/Tertiary `{{DropsLine}}` rows from the base page (fetched only when the loaded page has no drop table), `WikiClient.petNames()` identifies the pet via `Category:Pets`, and the pet is preselected when found
+- [x] 19 new tests; 166 total green
+- [ ] User visual verification in dev client
+
 ## Next
 - [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)

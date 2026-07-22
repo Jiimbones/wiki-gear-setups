@@ -8,7 +8,10 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -40,6 +43,7 @@ public class WikiClient
 	private final OkHttpClient http;
 	private final Gson gson;
 	private final ConcurrentMap<String, CachedPage> pageCache = new ConcurrentHashMap<>();
+	private volatile CompletableFuture<Set<String>> petNames;
 
 	@Inject
 	public WikiClient(OkHttpClient http, Gson gson)
@@ -106,6 +110,68 @@ public class WikiClient
 			.build();
 
 		return fetchJson(url).thenApply(WikiClient::extractSearchResults);
+	}
+
+	/**
+	 * Every pet the wiki knows about, so a boss's pet can be told apart from
+	 * the jars and clue scrolls it shares a "Tertiary" section with (their
+	 * names follow no pattern — Olmlet, Lil' zik, Vorki). Fetched at most
+	 * once per session; failures resolve empty rather than propagating,
+	 * since this only decides a default icon.
+	 */
+	public CompletableFuture<Set<String>> petNames()
+	{
+		CompletableFuture<Set<String>> cached = petNames;
+		if (cached != null)
+		{
+			return cached;
+		}
+		synchronized (this)
+		{
+			if (petNames == null)
+			{
+				HttpUrl url = API.newBuilder()
+					.addQueryParameter("action", "query")
+					.addQueryParameter("list", "categorymembers")
+					.addQueryParameter("cmtitle", "Category:Pets")
+					.addQueryParameter("cmlimit", "500")
+					.addQueryParameter("format", "json")
+					.addQueryParameter("formatversion", "2")
+					.build();
+				petNames = fetchJson(url)
+					.thenApply(WikiClient::extractCategoryMembers)
+					.exceptionally(e ->
+					{
+						log.debug("Pet category lookup failed", e);
+						return Collections.emptySet();
+					});
+			}
+			return petNames;
+		}
+	}
+
+	static Set<String> extractCategoryMembers(JsonObject json)
+	{
+		Set<String> names = new LinkedHashSet<>();
+		JsonObject query = json.getAsJsonObject("query");
+		if (query == null)
+		{
+			return names;
+		}
+		JsonArray members = query.getAsJsonArray("categorymembers");
+		if (members == null)
+		{
+			return names;
+		}
+		for (JsonElement el : members)
+		{
+			JsonElement title = el.getAsJsonObject().get("title");
+			if (title != null)
+			{
+				names.add(title.getAsString());
+			}
+		}
+		return names;
 	}
 
 	private CompletableFuture<JsonObject> fetchJson(HttpUrl url)
