@@ -56,12 +56,15 @@ class DisclaimerPanel extends JPanel
 			+ "research for your account and the content you're doing — treat this plugin as a "
 			+ "helper, not gospel."));
 		content.add(Box.createVerticalStrut(8));
+		content.add(paragraph("Wiki pages list several options per slot, so once in a while a "
+			+ "layout will include something that doesn't quite fit the rest of it — an off-hand "
+			+ "next to a two-handed weapon, say. Give each setup a quick once-over before you "
+			+ "rely on it."));
+		content.add(Box.createVerticalStrut(8));
 		content.add(paragraph("Your bank is only read to work out what you own. "
 			+ "Nothing is sent anywhere."));
 		content.add(Box.createVerticalStrut(8));
-		content.add(paragraph("If a setup looks wrong, it's far more likely that I've misread the "
-			+ "wiki page than that the wiki is wrong — so please report bugs to the GitHub and "
-			+ "I'll get them fixed."));
+		content.add(paragraph("Please report any bugs you find to the Git."));
 
 		JScrollPane scroll = new JScrollPane(new ScrollableWrapper(content),
 			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
