@@ -17,7 +17,6 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
@@ -32,7 +31,6 @@ import net.runelite.client.ui.FontManager;
  * panel's real width whenever it changes, since a hard-coded pixel width
  * is what clipped them before.
  */
-@Slf4j
 class DisclaimerPanel extends JPanel
 {
 	private static final Color HEADING = ColorScheme.BRAND_ORANGE;
@@ -86,8 +84,6 @@ class DisclaimerPanel extends JPanel
 			"Wiki pages list several options per slot, so now and then a layout includes "
 				+ "something that doesn't quite fit the rest of it — an off-hand next to a "
 				+ "two-handed weapon, say.");
-		addSection(content, "Your bank stays yours",
-			"It's only read to work out what you own. Nothing is sent anywhere.");
 		addSection(content, "Found a bug?",
 			"Please report any bugs you find to the Git.");
 
