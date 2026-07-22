@@ -16,6 +16,7 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
@@ -30,10 +31,12 @@ import net.runelite.client.ui.FontManager;
  * panel's real width whenever it changes, since a hard-coded pixel width
  * is what clipped them before.
  */
+@Slf4j
 class DisclaimerPanel extends JPanel
 {
 	private static final Color HEADING = ColorScheme.BRAND_ORANGE;
-	private static final int SIDE_PADDING = 10;
+	/** RuneLite reserves 17px for the sidebar scrollbar; leave clearance for it. */
+	private static final int SIDE_PADDING = 24;
 
 	private final List<Paragraph> paragraphs = new ArrayList<>();
 	private final JPanel content;
@@ -150,7 +153,12 @@ class DisclaimerPanel extends JPanel
 		return label;
 	}
 
-	/** Re-wraps every paragraph to the width the text column actually has. */
+	/**
+	 * Re-wraps every paragraph to the width the text column actually has.
+	 * The label's maximum size is pinned to the same value so the layout
+	 * cannot hand it more room than the text was wrapped for — that mismatch
+	 * is what clipped the last character of every line.
+	 */
 	private void reflow()
 	{
 		int width = content.getWidth() - SIDE_PADDING;
@@ -159,10 +167,13 @@ class DisclaimerPanel extends JPanel
 			return;
 		}
 		renderedWidth = width;
+		log.debug("Disclaimer reflow: panel={} content={} wrapping at {}",
+			getWidth(), content.getWidth(), width);
 		for (Paragraph paragraph : paragraphs)
 		{
 			paragraph.label.setText("<html><div style='width:" + width + "px'>"
 				+ paragraph.text.replace("<", "&lt;") + "</div></html>");
+			paragraph.label.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
 		}
 		revalidate();
 	}
