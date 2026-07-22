@@ -4,6 +4,10 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -14,23 +18,41 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.PluginPanel;
 
 /**
- * Shown in place of the search UI the first time the panel is opened, and
- * again on demand from the footer. In-panel rather than a startup dialog so
- * it can never interrupt play.
+ * Shown in place of the search UI once per session, and on demand from the
+ * footer. In-panel rather than a startup dialog so it can never interrupt
+ * play.
  *
- * Order: logo, title, body, accept, personal note.
+ * Everything sits in one scrolling column — logo, title, body, accept,
+ * personal note — so the button follows the text instead of being stranded
+ * at the bottom of a tall sidebar. Wrapped paragraphs re-render at the
+ * panel's real width whenever it changes, since a hard-coded pixel width
+ * is what clipped them before.
  */
 class DisclaimerPanel extends JPanel
 {
-	/** Leaves room for the panel border and the scrollbar so text never clips. */
-	private static final int TEXT_WIDTH = PluginPanel.PANEL_WIDTH - 44;
+	private static final Color HEADING = ColorScheme.BRAND_ORANGE;
+	private static final int SIDE_PADDING = 10;
+
+	private final List<Paragraph> paragraphs = new ArrayList<>();
+	private int renderedWidth = -1;
+
+	private static final class Paragraph
+	{
+		final JLabel label;
+		final String text;
+
+		Paragraph(JLabel label, String text)
+		{
+			this.label = label;
+			this.text = text;
+		}
+	}
 
 	DisclaimerPanel(Icon banner, Runnable onAccept)
 	{
-		super(new BorderLayout(0, 8));
+		super(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
 		JPanel content = new JPanel();
@@ -42,7 +64,7 @@ class DisclaimerPanel extends JPanel
 			JLabel bannerLabel = new JLabel(banner);
 			bannerLabel.setAlignmentX(LEFT_ALIGNMENT);
 			content.add(bannerLabel);
-			content.add(Box.createVerticalStrut(12));
+			content.add(Box.createVerticalStrut(14));
 		}
 
 		JLabel title = new JLabel("Before you start");
@@ -50,21 +72,40 @@ class DisclaimerPanel extends JPanel
 		title.setForeground(Color.WHITE);
 		title.setAlignmentX(LEFT_ALIGNMENT);
 		content.add(title);
-		content.add(Box.createVerticalStrut(8));
+		content.add(Box.createVerticalStrut(10));
 
-		content.add(paragraph("Recommended items are only <b>suspected</b> BIS. Always do your own "
-			+ "research for your account and the content you're doing — treat this plugin as a "
-			+ "helper, not gospel."));
-		content.add(Box.createVerticalStrut(8));
-		content.add(paragraph("Wiki pages list several options per slot, so once in a while a "
-			+ "layout will include something that doesn't quite fit the rest of it — an off-hand "
-			+ "next to a two-handed weapon, say. Give each setup a quick once-over before you "
-			+ "rely on it."));
-		content.add(Box.createVerticalStrut(8));
-		content.add(paragraph("Your bank is only read to work out what you own. "
-			+ "Nothing is sent anywhere."));
-		content.add(Box.createVerticalStrut(8));
-		content.add(paragraph("Please report any bugs you find to the Git."));
+		addSection(content, "Suspected BIS, not gospel",
+			"Recommended items are only suspected best-in-slot. Always do your own research "
+				+ "for your account and the content you're doing.");
+		addSection(content, "Give each setup a once-over",
+			"Wiki pages list several options per slot, so now and then a layout includes "
+				+ "something that doesn't quite fit the rest of it — an off-hand next to a "
+				+ "two-handed weapon, say.");
+		addSection(content, "Your bank stays yours",
+			"It's only read to work out what you own. Nothing is sent anywhere.");
+		addSection(content, "Found a bug?",
+			"Please report any bugs you find to the Git.");
+
+		content.add(Box.createVerticalStrut(6));
+
+		JButton accept = RoundedButton.accent("Got it");
+		accept.setFont(accept.getFont().deriveFont(Font.BOLD));
+		accept.setAlignmentX(LEFT_ALIGNMENT);
+		accept.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+		accept.addActionListener(e -> onAccept.run());
+		content.add(accept);
+		content.add(Box.createVerticalStrut(14));
+
+		JLabel note = paragraph(content, "If you enjoy the plugin, feel free to buy me a coffee "
+			+ "(Donate button below) or share it with a friend :)");
+		note.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+
+		content.add(Box.createVerticalStrut(4));
+		JLabel signature = new JLabel("~ Jiimbones");
+		signature.setFont(FontManager.getRunescapeFont());
+		signature.setForeground(HEADING);
+		signature.setAlignmentX(LEFT_ALIGNMENT);
+		content.add(signature);
 
 		JScrollPane scroll = new JScrollPane(new ScrollableWrapper(content),
 			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -73,41 +114,53 @@ class DisclaimerPanel extends JPanel
 		SlimScrollBarUI.apply(scroll.getVerticalScrollBar());
 		add(scroll, BorderLayout.CENTER);
 
-		JPanel bottom = new JPanel();
-		bottom.setLayout(new BoxLayout(bottom, BoxLayout.Y_AXIS));
-		bottom.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-		JButton accept = RoundedButton.accent("Got it");
-		accept.setFont(accept.getFont().deriveFont(Font.BOLD));
-		accept.setAlignmentX(LEFT_ALIGNMENT);
-		accept.setMaximumSize(new Dimension(Integer.MAX_VALUE, accept.getPreferredSize().height));
-		accept.addActionListener(e -> onAccept.run());
-		bottom.add(accept);
-		bottom.add(Box.createVerticalStrut(10));
-
-		JLabel note = new JLabel("<html><div style='width:" + TEXT_WIDTH + "px'>"
-			+ "If you enjoy the plugin, feel free to buy me a coffee (Donate button below) "
-			+ "or share it with a friend :)</div></html>");
-		note.setFont(FontManager.getRunescapeSmallFont());
-		note.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
-		note.setAlignmentX(LEFT_ALIGNMENT);
-		bottom.add(note);
-
-		JLabel signature = new JLabel("~ Jiimbones");
-		signature.setFont(FontManager.getRunescapeSmallFont());
-		signature.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
-		signature.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
-		signature.setAlignmentX(LEFT_ALIGNMENT);
-		bottom.add(signature);
-
-		add(bottom, BorderLayout.SOUTH);
+		addComponentListener(new ComponentAdapter()
+		{
+			@Override
+			public void componentResized(ComponentEvent e)
+			{
+				reflow();
+			}
+		});
 	}
 
-	private static JLabel paragraph(String html)
+	private void addSection(JPanel content, String heading, String body)
 	{
-		JLabel label = new JLabel("<html><div style='width:" + TEXT_WIDTH + "px'>" + html + "</div></html>");
+		JLabel label = new JLabel(heading);
+		label.setFont(FontManager.getRunescapeSmallFont().deriveFont(Font.BOLD));
+		label.setForeground(HEADING);
+		label.setAlignmentX(LEFT_ALIGNMENT);
+		content.add(label);
+		content.add(Box.createVerticalStrut(2));
+		paragraph(content, body);
+		content.add(Box.createVerticalStrut(10));
+	}
+
+	private JLabel paragraph(JPanel content, String text)
+	{
+		JLabel label = new JLabel();
+		label.setFont(FontManager.getRunescapeFont());
 		label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		label.setAlignmentX(LEFT_ALIGNMENT);
+		content.add(label);
+		paragraphs.add(new Paragraph(label, text));
 		return label;
+	}
+
+	/** Re-wraps every paragraph to the width the panel actually has. */
+	private void reflow()
+	{
+		int width = getWidth() - SIDE_PADDING;
+		if (width <= 0 || width == renderedWidth)
+		{
+			return;
+		}
+		renderedWidth = width;
+		for (Paragraph paragraph : paragraphs)
+		{
+			paragraph.label.setText("<html><div style='width:" + width + "px'>"
+				+ paragraph.text.replace("<", "&lt;") + "</div></html>");
+		}
+		revalidate();
 	}
 }

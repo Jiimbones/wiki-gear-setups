@@ -520,19 +520,34 @@ public class WikiGearSetupsPanel extends PluginPanel
 		return bannerIcon;
 	}
 
+	/** Full-width stacked buttons: side by side they crowded and overlapped. */
 	private JPanel footer()
 	{
-		JPanel footer = new JPanel(new BorderLayout(4, 0));
+		JPanel footer = new JPanel();
+		footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
 		footer.setOpaque(false);
 		footer.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createMatteBorder(1, 0, 0, 0, ColorScheme.DARKER_GRAY_HOVER_COLOR),
-			BorderFactory.createEmptyBorder(6, 0, 0, 0)));
-		JLabel dev = new JLabel("Developed by " + DEVELOPER_NAME);
-		dev.setFont(FontManager.getRunescapeSmallFont());
-		dev.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
-		// doubles as the permanent home for the disclaimer, without spending
-		// any of the little horizontal room the footer has left
+			BorderFactory.createEmptyBorder(8, 0, 0, 0)));
+
+		JButton bugReport = new RoundedButton("Report a bug");
+		bugReport.setToolTipText("Open a GitHub issue — include the page name and a screenshot");
+		bugReport.addActionListener(e -> LinkBrowser.browse(bugReportUrl()));
+		footer.add(fullWidth(bugReport));
+		footer.add(Box.createVerticalStrut(5));
+
+		JButton donate = new RoundedButton("Donate ♥");
+		donate.addActionListener(e -> LinkBrowser.browse(DONATION_URL));
+		footer.add(fullWidth(donate));
+		footer.add(Box.createVerticalStrut(7));
+
+		// also the permanent way back to the disclaimer
+		JLabel dev = new JLabel("Developed by " + DEVELOPER_NAME, SwingConstants.CENTER);
+		dev.setFont(FontManager.getRunescapeFont());
+		dev.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		dev.setToolTipText("About / disclaimer");
+		dev.setAlignmentX(LEFT_ALIGNMENT);
+		dev.setMaximumSize(new Dimension(Integer.MAX_VALUE, dev.getPreferredSize().height));
 		dev.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 		dev.addMouseListener(new java.awt.event.MouseAdapter()
 		{
@@ -541,25 +556,29 @@ public class WikiGearSetupsPanel extends PluginPanel
 			{
 				showDisclaimer();
 			}
+
+			@Override
+			public void mouseEntered(java.awt.event.MouseEvent e)
+			{
+				dev.setForeground(Color.WHITE);
+			}
+
+			@Override
+			public void mouseExited(java.awt.event.MouseEvent e)
+			{
+				dev.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+			}
 		});
-		footer.add(dev, BorderLayout.WEST);
-		JButton bugReport = new RoundedButton("Report bug");
-		bugReport.setFont(FontManager.getRunescapeSmallFont());
-		bugReport.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-		bugReport.setToolTipText("Open a GitHub issue — include the page name and a screenshot");
-		bugReport.addActionListener(e -> LinkBrowser.browse(bugReportUrl()));
-		JButton donate = new RoundedButton("Donate ♥");
-		donate.setFont(FontManager.getRunescapeSmallFont());
-		donate.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-		donate.addActionListener(e -> LinkBrowser.browse(DONATION_URL));
-		JPanel footerButtons = new JPanel();
-		footerButtons.setOpaque(false);
-		footerButtons.setLayout(new BoxLayout(footerButtons, BoxLayout.X_AXIS));
-		footerButtons.add(bugReport);
-		footerButtons.add(Box.createHorizontalStrut(4));
-		footerButtons.add(donate);
-		footer.add(footerButtons, BorderLayout.EAST);
+		footer.add(dev);
 		return footer;
+	}
+
+	private static JButton fullWidth(JButton button)
+	{
+		button.setAlignmentX(LEFT_ALIGNMENT);
+		button.setBorder(BorderFactory.createEmptyBorder(7, 12, 7, 12));
+		button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+		return button;
 	}
 
 	/** Prefills the issue with the page being viewed so reports are actionable. */
