@@ -36,6 +36,7 @@ class DisclaimerPanel extends JPanel
 	private static final int SIDE_PADDING = 10;
 
 	private final List<Paragraph> paragraphs = new ArrayList<>();
+	private final JPanel content;
 	private int renderedWidth = -1;
 
 	private static final class Paragraph
@@ -55,7 +56,7 @@ class DisclaimerPanel extends JPanel
 		super(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JPanel content = new JPanel();
+		content = new JPanel();
 		content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
 		content.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
@@ -114,7 +115,9 @@ class DisclaimerPanel extends JPanel
 		SlimScrollBarUI.apply(scroll.getVerticalScrollBar());
 		add(scroll, BorderLayout.CENTER);
 
-		addComponentListener(new ComponentAdapter()
+		// listen on the labels' own parent: the outer panel is wider than the
+		// column they actually get, by the scrollbar and viewport insets
+		content.addComponentListener(new ComponentAdapter()
 		{
 			@Override
 			public void componentResized(ComponentEvent e)
@@ -147,10 +150,10 @@ class DisclaimerPanel extends JPanel
 		return label;
 	}
 
-	/** Re-wraps every paragraph to the width the panel actually has. */
+	/** Re-wraps every paragraph to the width the text column actually has. */
 	private void reflow()
 	{
-		int width = getWidth() - SIDE_PADDING;
+		int width = content.getWidth() - SIDE_PADDING;
 		if (width <= 0 || width == renderedWidth)
 		{
 			return;
