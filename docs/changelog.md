@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-21: Disclaimer now shows once per session instead of once ever (panel is built per client run, so no persisted flag); orphaned `disclaimerAccepted` and `assumeSlayerTask` config keys unset on startup.
 - 2026-07-21: Icon picker — sprite grid popup (names in tooltips) instead of a named dropdown, now including the boss's uniques and pet parsed from its drop table (`DropsParser`, base-page fallback fetch, `Category:Pets` for pet identification); pet preselected when found; 166 tests green.
 - 2026-07-21: Slayer task moved from config to a contextual checkbox above "Show wiki BIS" — appears only when the resolved setup actually has a task-conditional recommendation (footnote rule unchanged), session-scoped, defaults off; 159 tests green.
 - 2026-07-21: God cape fixes — `{{plink|Page#Anchor|txt=…|pic=…}}` links now resolve via display text/picture fallbacks (CoX and ToA cape slots were entirely unrecognized), and the three imbued god capes (plus max cape forms) are mutually interchangeable, as are the three plain ones; 156 tests green.

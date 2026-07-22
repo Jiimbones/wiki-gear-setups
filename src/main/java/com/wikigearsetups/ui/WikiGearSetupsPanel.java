@@ -70,7 +70,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStats;
 import net.runelite.client.plugins.banktags.tabs.Layout;
@@ -103,7 +102,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final String DEVELOPER_NAME = "Jiimbones";
 	private static final String CARD_MAIN = "main";
 	private static final String CARD_DISCLAIMER = "disclaimer";
-	private static final String DISCLAIMER_KEY = "disclaimerAccepted";
 	private static final String DONATION_URL = "https://www.paypal.com/ncp/payment/FQTFP8N8H7P2W";
 	private static final String BUG_REPORT_URL = "https://github.com/Jiimbones/wiki-gear-setups/issues/new";
 
@@ -120,7 +118,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final ItemManager itemManager;
 	private final ClientThread clientThread;
 	private final WikiGearSetupsConfig config;
-	private final ConfigManager configManager;
 	private final CardLayout cards = new CardLayout();
 	private ImageIcon bannerIcon;
 	private boolean bannerLoaded;
@@ -169,10 +166,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	public WikiGearSetupsPanel(WikiClient wikiClient, OwnershipResolver ownershipResolver,
 		InventoryResolver inventoryResolver, BankStateCache bankStateCache,
 		BankTagImporter importer, ItemNameIndex itemNameIndex, ItemManager itemManager,
-		ClientThread clientThread, WikiGearSetupsConfig config, ConfigManager configManager)
+		ClientThread clientThread, WikiGearSetupsConfig config)
 	{
 		super(false);
-		this.configManager = configManager;
 		this.iconPicker = new IconPicker(itemManager);
 		this.wikiClient = wikiClient;
 		this.ownershipResolver = ownershipResolver;
@@ -440,17 +436,13 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		add(main, CARD_MAIN);
 		add(new DisclaimerPanel(bannerIcon(), this::acceptDisclaimer), CARD_DISCLAIMER);
-		cards.show(this, disclaimerAccepted() ? CARD_MAIN : CARD_DISCLAIMER);
-	}
-
-	private boolean disclaimerAccepted()
-	{
-		return configManager.getConfiguration(WikiGearSetupsConfig.GROUP, DISCLAIMER_KEY) != null;
+		// shown once per session: the panel is built when the plugin starts,
+		// so a fresh client always opens on it
+		cards.show(this, CARD_DISCLAIMER);
 	}
 
 	private void acceptDisclaimer()
 	{
-		configManager.setConfiguration(WikiGearSetupsConfig.GROUP, DISCLAIMER_KEY, "1");
 		cards.show(this, CARD_MAIN);
 	}
 

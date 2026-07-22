@@ -134,6 +134,11 @@ public class WikiGearSetupsPlugin extends Plugin
 			}
 			configManager.setConfiguration(WikiGearSetupsConfig.GROUP, "migratedShowBestDefault", "1");
 		}
+
+		// keys from settings that no longer exist: the slayer choice moved into
+		// the panel, and the disclaimer now shows once per session
+		configManager.unsetConfiguration(WikiGearSetupsConfig.GROUP, "assumeSlayerTask");
+		configManager.unsetConfiguration(WikiGearSetupsConfig.GROUP, "disclaimerAccepted");
 	}
 
 	@Provides
