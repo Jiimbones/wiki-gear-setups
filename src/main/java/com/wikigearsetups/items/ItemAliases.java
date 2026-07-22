@@ -1,5 +1,6 @@
 package com.wikigearsetups.items;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -22,9 +23,16 @@ public final class ItemAliases
 {
 	private static final Map<String, List<String>> GENERIC = new HashMap<>();
 	private static final Map<String, List<String>> UPGRADES = new HashMap<>();
+	private static final Map<String, List<String>> EQUIVALENT = new HashMap<>();
 
 	static
 	{
+		// interchangeable within their tier: the wiki names one god cape but
+		// any of them does the same job, and pages disagree on which to name
+		equivalent("Imbued saradomin cape", "Imbued guthix cape", "Imbued zamorak cape",
+			"Imbued saradomin max cape", "Imbued guthix max cape", "Imbued zamorak max cape");
+		equivalent("Saradomin cape", "Guthix cape", "Zamorak cape");
+
 		generic("God cape", "Saradomin cape", "Guthix cape", "Zamorak cape");
 		generic("Imbued god cape",
 			"Imbued saradomin cape", "Imbued guthix cape", "Imbued zamorak cape",
@@ -78,6 +86,23 @@ public final class ItemAliases
 		UPGRADES.put(ItemNames.normalize(name), Arrays.asList(betterItems));
 	}
 
+	/** Registers a mutually interchangeable group: each member accepts the others. */
+	private static void equivalent(String... members)
+	{
+		for (String member : members)
+		{
+			List<String> others = new ArrayList<>(members.length - 1);
+			for (String other : members)
+			{
+				if (!other.equals(member))
+				{
+					others.add(other);
+				}
+			}
+			EQUIVALENT.put(ItemNames.normalize(member), others);
+		}
+	}
+
 	private ItemAliases()
 	{
 	}
@@ -94,5 +119,12 @@ public final class ItemAliases
 	{
 		List<String> upgrades = UPGRADES.get(normalizedName);
 		return upgrades == null ? Collections.emptyList() : upgrades;
+	}
+
+	/** Same-tier interchangeable items for {@code name}, or empty. */
+	public static List<String> equivalentsFor(String normalizedName)
+	{
+		List<String> equivalents = EQUIVALENT.get(normalizedName);
+		return equivalents == null ? Collections.emptyList() : equivalents;
 	}
 }

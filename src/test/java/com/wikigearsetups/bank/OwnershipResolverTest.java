@@ -203,6 +203,25 @@ public class OwnershipResolverTest
 		assertFalse(r.getPicks().get(0).isOwned());
 	}
 
+	@Test
+	public void fallbackNamesRescueAPageAnchorLink()
+	{
+		int imbuedSara = 21791;
+		OwnershipResolver r = new OwnershipResolver(new ItemResolver(
+			FakeItemNameIndex.of(imbuedSara, "Imbued saradomin cape")));
+
+		// what CoX/ToA actually produce: an unresolvable page+anchor name
+		// with the real item in the display text and picture
+		GearSetup s = setup(EquipSlot.CAPE, new RankedItem("God capes#Imbuing", 1, null,
+			Arrays.asList("Imbued god cape", "Imbued saradomin cape")));
+
+		SetupResolution resolution = r.resolve(s, owned(imbuedSara), MissingGearBehavior.OMIT, false);
+
+		assertEquals(1, resolution.getPicks().size());
+		assertEquals(imbuedSara, resolution.getPicks().get(0).getItemId());
+		assertTrue("nothing should be reported unrecognized", resolution.getUnresolvedNames().isEmpty());
+	}
+
 	// --- PickStrategy.TOP_RECOMMENDATION (the "show wiki BIS" mode) ---
 
 	@Test

@@ -166,12 +166,24 @@ public class GearSetupParser
 				if (item != null)
 				{
 					item = stripMarkup(item);
+					// a "#" means the target is a page section, never an item —
+					// the real name is in txt=, or before the anchor
+					List<String> fallbacks = new ArrayList<>();
+					addIfPresent(fallbacks, namedParam(inner, "txt"));
+					addIfPresent(fallbacks, namedParam(inner, "pic"));
+					int anchor = item.indexOf('#');
+					if (anchor >= 0)
+					{
+						String beforeAnchor = item.substring(0, anchor).trim();
+						item = fallbacks.isEmpty() ? beforeAnchor : fallbacks.remove(0);
+						addIfPresent(fallbacks, beforeAnchor);
+					}
 					// "+{{plinkp|Trouver parchment}}" marks a companion item
 					// (lock the gear at Perdu), not a wearable alternative
 					if (!item.isEmpty() && !item.equalsIgnoreCase("n/a") && !item.equalsIgnoreCase("none")
 						&& !item.equalsIgnoreCase("trouver parchment") && !precededByPlus(v, i))
 					{
-						items.add(new RankedItem(item, rank, null));
+						items.add(new RankedItem(item, rank, null, fallbacks));
 					}
 				}
 			}
@@ -185,7 +197,8 @@ public class GearSetupParser
 					{
 						RankedItem last = items.get(items.size() - 1);
 						String merged = last.getNote() == null ? note : last.getNote() + "; " + note;
-						items.set(items.size() - 1, new RankedItem(last.getName(), rank, merged));
+						items.set(items.size() - 1,
+							new RankedItem(last.getName(), rank, merged, last.getFallbackNames()));
 					}
 				}
 			}
@@ -248,6 +261,29 @@ public class GearSetupParser
 	}
 
 	/** First non-empty positional (un-named) parameter of a template body, or null. */
+	private static void addIfPresent(List<String> out, String value)
+	{
+		if (value != null && !value.isEmpty() && !out.contains(value))
+		{
+			out.add(value);
+		}
+	}
+
+	/** Value of a named template param ("txt", "pic"), markup stripped, or null. */
+	static String namedParam(String templateBody, String param)
+	{
+		for (String part : splitTopLevel(templateBody, '|'))
+		{
+			int eq = indexOfTopLevel(part, '=');
+			if (eq > 0 && part.substring(0, eq).trim().equalsIgnoreCase(param))
+			{
+				String value = stripMarkup(part.substring(eq + 1));
+				return value.isEmpty() ? null : value;
+			}
+		}
+		return null;
+	}
+
 	static String firstPositional(String templateBody)
 	{
 		List<String> parts = splitTopLevel(templateBody, '|');

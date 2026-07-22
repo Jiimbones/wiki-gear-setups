@@ -295,6 +295,49 @@ public class ItemResolverTest
 	}
 
 	@Test
+	public void anyImbuedGodCapeSatisfiesAnyOther()
+	{
+		int imbuedSara = 21791;
+		int imbuedGuthix = 21793;
+		int imbuedZamorak = 21795;
+		ItemResolver r = resolver(
+			imbuedSara, "Imbued saradomin cape",
+			imbuedGuthix, "Imbued guthix cape",
+			imbuedZamorak, "Imbued zamorak cape");
+
+		// wiki example setups name the saradomin one; owning either other
+		// imbued cape must count
+		ResolvedItem sara = r.resolve("Imbued saradomin cape").orElseThrow(AssertionError::new);
+		assertEquals("the named cape stays the primary/goal", imbuedSara, (int) sara.getPrimaryId());
+		assertTrue(sara.getAcceptableIds().contains(imbuedGuthix));
+		assertTrue(sara.getAcceptableIds().contains(imbuedZamorak));
+
+		ResolvedItem zamorak = r.resolve("Imbued zamorak cape").orElseThrow(AssertionError::new);
+		assertTrue("and the relation works in reverse", zamorak.getAcceptableIds().contains(imbuedSara));
+	}
+
+	@Test
+	public void plainGodCapesAreInterchangeableButNeverSatisfyImbued()
+	{
+		int sara = 2412;
+		int guthix = 2413;
+		int imbuedSara = 21791;
+		ItemResolver r = resolver(
+			sara, "Saradomin cape",
+			guthix, "Guthix cape",
+			imbuedSara, "Imbued saradomin cape");
+
+		ResolvedItem plain = r.resolve("Saradomin cape").orElseThrow(AssertionError::new);
+		assertTrue("plain capes swap freely", plain.getAcceptableIds().contains(guthix));
+		assertTrue("and an imbued upgrade still counts", plain.getAcceptableIds().contains(imbuedSara));
+
+		ResolvedItem imbued = r.resolve("Imbued saradomin cape").orElseThrow(AssertionError::new);
+		assertFalse("but a plain cape must not satisfy an imbued recommendation",
+			imbued.getAcceptableIds().contains(sara));
+		assertFalse(imbued.getAcceptableIds().contains(guthix));
+	}
+
+	@Test
 	public void stripChargeDecorations()
 	{
 		assertEquals("black mask (i)", ItemNames.stripChargeDecorations("black mask (10) (i)"));

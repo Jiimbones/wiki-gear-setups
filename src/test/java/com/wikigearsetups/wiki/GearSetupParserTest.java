@@ -3,10 +3,12 @@ package com.wikigearsetups.wiki;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -37,6 +39,90 @@ public class GearSetupParserTest
 		assertNotNull(helm.getNote());
 		assertTrue(helm.getNote().contains("full"));
 		assertTrue(helm.getNote().contains("set"));
+	}
+
+	@Test
+	public void pageAnchorLinkUsesDisplayTextAsTheItemName()
+	{
+		// exact cape1 syntax from CoX and ToA: the link target is a page
+		// section, the real item name is in txt=
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Magic"
+			+ "|cape1 = {{plink|God capes#Imbuing|txt=Imbued god cape|pic=Imbued saradomin cape}}}}");
+
+		RankedItem cape = setups.get(0).getSlots().get(EquipSlot.CAPE).get(0);
+		assertEquals("Imbued god cape", cape.getName());
+		assertTrue("the picture is kept as a further fallback",
+			cape.getFallbackNames().contains("Imbued saradomin cape"));
+	}
+
+	@Test
+	public void pageAnchorWithoutDisplayTextFallsBackToThePageName()
+	{
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Magic"
+			+ "|cape1 = {{plink|God capes#Imbuing}}}}");
+
+		assertEquals("God capes", setups.get(0).getSlots().get(EquipSlot.CAPE).get(0).getName());
+	}
+
+	@Test
+	public void ordinaryLinkKeepsItsPositionalNameAndOffersTheRest()
+	{
+		// a shortened display text must not displace a perfectly good item name
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Ranged"
+			+ "|weapon1 = {{plink|Toxic blowpipe|txt=blowpipe|pic=Toxic blowpipe (empty)}}}}");
+
+		RankedItem weapon = setups.get(0).getSlots().get(EquipSlot.WEAPON).get(0);
+		assertEquals("Toxic blowpipe", weapon.getName());
+		assertEquals(Arrays.asList("blowpipe", "Toxic blowpipe (empty)"), weapon.getFallbackNames());
+	}
+
+	@Test
+	public void footnotesSurviveOnItemsThatCarryFallbackNames()
+	{
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Magic"
+			+ "|cape1 = {{plink|God capes#Imbuing|txt=Imbued god cape}}{{efn|Any god cape works}}}}");
+
+		RankedItem cape = setups.get(0).getSlots().get(EquipSlot.CAPE).get(0);
+		assertEquals("Imbued god cape", cape.getName());
+		assertEquals("Any god cape works", cape.getNote());
+		assertEquals(Arrays.asList("God capes"), cape.getFallbackNames());
+	}
+
+	@Test
+	public void noFixtureYieldsAPageAnchorAsAnItemName() throws IOException
+	{
+		for (String page : new String[]{"cox-strategies", "toa-strategies", "zulrah-strategies",
+			"vorkath-strategies", "alchemical-hydra-strategies", "gotr-strategies"})
+		{
+			for (GearSetup setup : parser.parse(fixture(page)))
+			{
+				for (List<RankedItem> slot : setup.getSlots().values())
+				{
+					for (RankedItem item : slot)
+					{
+						assertFalse(page + " produced a page link as an item: " + item.getName(),
+							item.getName().contains("#"));
+					}
+				}
+			}
+		}
+	}
+
+	@Test
+	public void coxCapeSlotResolvesToTheImbuedGodCape() throws IOException
+	{
+		// the live bug: cape1 is {{plink|God capes#Imbuing|txt=Imbued god cape|...}}
+		boolean found = false;
+		for (GearSetup setup : parser.parse(fixture("cox-strategies")))
+		{
+			List<RankedItem> cape = setup.getSlots().get(EquipSlot.CAPE);
+			if (cape != null && cape.get(0).getName().equalsIgnoreCase("Imbued god cape"))
+			{
+				found = true;
+				assertTrue(cape.get(0).getFallbackNames().contains("Imbued saradomin cape"));
+			}
+		}
+		assertTrue("expected a cape slot naming the imbued god cape", found);
 	}
 
 	@Test

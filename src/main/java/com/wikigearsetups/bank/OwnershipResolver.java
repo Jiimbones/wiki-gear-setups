@@ -151,7 +151,7 @@ public class OwnershipResolver
 			{
 				continue;
 			}
-			Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+			Optional<ResolvedItem> resolved = resolveCandidate(candidate);
 			if (!resolved.isPresent())
 			{
 				if (unresolved != null)
@@ -195,6 +195,29 @@ public class OwnershipResolver
 	}
 
 	/**
+	 * Wiki links sometimes point at a page rather than an item ("God
+	 * capes#Imbuing"); the display text and picture the template carried are
+	 * tried in turn when the primary name resolves to nothing.
+	 */
+	private Optional<ResolvedItem> resolveCandidate(RankedItem candidate)
+	{
+		Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+		if (resolved.isPresent())
+		{
+			return resolved;
+		}
+		for (String fallback : candidate.getFallbackNames())
+		{
+			resolved = itemResolver.resolve(fallback);
+			if (resolved.isPresent())
+			{
+				return resolved;
+			}
+		}
+		return Optional.empty();
+	}
+
+	/**
 	 * The wiki's own first choice for the slot, ownership only deciding
 	 * whether the pick is flagged owned and which variant id is placed —
 	 * an owned recolour/upgrade still lands as the player's copy so the tab
@@ -210,7 +233,7 @@ public class OwnershipResolver
 			{
 				continue;
 			}
-			Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+			Optional<ResolvedItem> resolved = resolveCandidate(candidate);
 			if (!resolved.isPresent())
 			{
 				if (unresolved != null)
@@ -346,7 +369,7 @@ public class OwnershipResolver
 				{
 					continue;
 				}
-				Optional<ResolvedItem> resolved = itemResolver.resolve(candidate.getName());
+				Optional<ResolvedItem> resolved = resolveCandidate(candidate);
 				if (!resolved.isPresent())
 				{
 					continue;

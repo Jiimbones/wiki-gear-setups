@@ -159,6 +159,14 @@ public class ItemResolver
 			resolveExact(upgrade).ifPresent(r -> acceptable.addAll(r.getAcceptableIds()));
 		}
 
+		// same-tier interchangeables (the three imbued god capes). Looked up
+		// by name rather than resolved, since the relation is bidirectional
+		// and resolving would recurse forever
+		for (String equivalent : ItemAliases.equivalentsFor(wiki))
+		{
+			acceptable.addAll(index.idsByName(ItemNames.normalize(equivalent)));
+		}
+
 		// a divine potion satisfies its base potion (never the reverse)
 		if (wiki.contains("potion") && !wiki.startsWith("divine "))
 		{
