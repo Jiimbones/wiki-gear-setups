@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-21: Slayer task moved from config to a contextual checkbox above "Show wiki BIS" — appears only when the resolved setup actually has a task-conditional recommendation (footnote rule unchanged), session-scoped, defaults off; 159 tests green.
 - 2026-07-21: God cape fixes — `{{plink|Page#Anchor|txt=…|pic=…}}` links now resolve via display text/picture fallbacks (CoX and ToA cape slots were entirely unrecognized), and the three imbued god capes (plus max cape forms) are mutually interchangeable, as are the three plain ones; 156 tests green.
 - 2026-07-21: Disclaimer reflow (logo/title/body/accept/note, no clipping — shared `ScrollableWrapper`), copy now takes responsibility for wrong setups rather than the wiki's authors, bug report as a body line; white checkbox tick (`CheckBoxIcon`); inventory auto-select prefers an exact label match (`InventoryMatcher`); 147 tests green.
 - 2026-07-21: First-run disclaimer — in-panel card (BIS caveat, privacy note, bug reporting, thank-you), gated on `disclaimerAccepted`, re-openable from the footer developer label.

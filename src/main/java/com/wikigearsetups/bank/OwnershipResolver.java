@@ -390,6 +390,26 @@ public class OwnershipResolver
 	 * When the user isn't assuming a task, such items are skipped entirely —
 	 * they must satisfy neither ownership nor the goal-item fallback.
 	 */
+	/**
+	 * Whether any recommendation in the setup only applies while on a slayer
+	 * task — drives whether the panel offers the "on a slayer task" choice at
+	 * all, so it appears exactly on the pages where it changes something.
+	 */
+	public static boolean hasSlayerConditional(GearSetup setup)
+	{
+		for (List<RankedItem> alternatives : setup.getSlots().values())
+		{
+			for (RankedItem item : alternatives)
+			{
+				if (isSlayerTaskConditional(item))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
 	static boolean isSlayerTaskConditional(RankedItem item)
 	{
 		String note = item.getNote();

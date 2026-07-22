@@ -204,6 +204,23 @@ public class OwnershipResolverTest
 	}
 
 	@Test
+	public void slayerConditionalDetectionDrivesTheToggle()
+	{
+		GearSetup conditional = setup(EquipSlot.HEAD,
+			new RankedItem("Slayer helmet (i)", 1, "If on a Zulrah slayer boss task"),
+			new RankedItem("Ancestral hat", 2, null));
+		assertTrue(OwnershipResolver.hasSlayerConditional(conditional));
+
+		GearSetup plain = setup(EquipSlot.HEAD, new RankedItem("Ancestral hat", 1, null));
+		assertFalse(OwnershipResolver.hasSlayerConditional(plain));
+
+		// an informational footnote mentioning slayer isn't a task condition
+		GearSetup informational = setup(EquipSlot.HEAD,
+			new RankedItem("Slayer helmet (i)", 1, "Requires 55 Slayer to make"));
+		assertFalse(OwnershipResolver.hasSlayerConditional(informational));
+	}
+
+	@Test
 	public void fallbackNamesRescueAPageAnchorLink()
 	{
 		int imbuedSara = 21791;

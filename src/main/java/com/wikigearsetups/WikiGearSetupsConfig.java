@@ -51,14 +51,4 @@ public interface WikiGearSetupsConfig extends Config
 		return LayoutStyle.EQUIPMENT_SCREEN;
 	}
 
-	@ConfigItem(
-		keyName = "assumeSlayerTask",
-		name = "Assume on slayer task",
-		description = "Include recommendations that only apply while on a slayer task, such as the slayer helmet",
-		position = 2
-	)
-	default boolean assumeSlayerTask()
-	{
-		return false;
-	}
 }

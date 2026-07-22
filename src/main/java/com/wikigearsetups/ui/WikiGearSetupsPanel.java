@@ -132,6 +132,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JComboBox<String> tierCombo = new JComboBox<>();
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
+	private final JCheckBox slayerToggle = new JCheckBox("On a slayer task");
 	private final JCheckBox recommendedToggle = new JCheckBox("Show wiki BIS (ignore my gear)");
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
@@ -350,6 +351,25 @@ public class WikiGearSetupsPanel extends PluginPanel
 		inventoryCombo.setVisible(false);
 		flow.add(inventoryCombo);
 		flow.add(Box.createVerticalStrut(8));
+
+		// only shown when the page actually has a task-conditional
+		// recommendation, so it never appears as dead weight
+		slayerToggle.setAlignmentX(LEFT_ALIGNMENT);
+		slayerToggle.setOpaque(false);
+		slayerToggle.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		slayerToggle.setFocusPainted(false);
+		slayerToggle.setToolTipText("Include recommendations that only apply while on a slayer task, "
+			+ "such as the slayer helmet");
+		CheckBoxIcon.apply(slayerToggle);
+		slayerToggle.addActionListener(e ->
+		{
+			userEditedTag = false;
+			userEditedIcon = false;
+			resolveSelection();
+		});
+		slayerToggle.setVisible(false);
+		flow.add(slayerToggle);
+		flow.add(Box.createVerticalStrut(4));
 
 		recommendedToggle.setAlignmentX(LEFT_ALIGNMENT);
 		recommendedToggle.setOpaque(false);
@@ -995,13 +1015,22 @@ public class WikiGearSetupsPanel extends PluginPanel
 			boolean hasSnapshot = bankStateCache.hasSnapshot();
 			PickStrategy strategy = recommendedToggle.isSelected()
 				? PickStrategy.TOP_RECOMMENDATION : PickStrategy.BEST_OWNED;
+			boolean onSlayerTask = slayerToggle.isSelected();
+			// the enriched setups are what actually gets resolved, so ask them
+			// (not the raw page) whether a task-conditional item is in play
+			boolean slayerRelevant = false;
+			for (GearSetup setup : selectedSetups)
+			{
+				slayerRelevant |= OwnershipResolver.hasSlayerConditional(setup);
+			}
+			boolean showSlayerToggle = slayerRelevant;
 
 			List<SetupResolution> resolutions = new ArrayList<>();
 			List<List<SlotPick>> gearBlocks = new ArrayList<>();
 			for (GearSetup setup : selectedSetups)
 			{
 				SetupResolution r = ownershipResolver.resolve(setup, owned,
-					config.missingGearBehavior(), config.assumeSlayerTask(), strategy);
+					config.missingGearBehavior(), onSlayerTask, strategy);
 				List<SlotPick> picks = OwnershipResolver.dropShieldForTwoHanded(r.getPicks(), this::isTwoHanded);
 				if (picks != r.getPicks())
 				{
@@ -1044,7 +1073,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 			{
 				for (GearSetup setup : selectedSetups)
 				{
-					for (int id : ownershipResolver.ownedAlternatives(setup, owned, config.assumeSlayerTask(), excluded))
+					for (int id : ownershipResolver.ownedAlternatives(setup, owned, onSlayerTask, excluded))
 					{
 						extras.add(id);
 						excluded.add(id);
@@ -1056,7 +1085,10 @@ public class WikiGearSetupsPanel extends PluginPanel
 			Set<Integer> unownedIds = collectUnowned(resolutions, invPicks, runePicks);
 
 			SwingUtilities.invokeLater(() ->
-				showPreview(resolutions, invResolution, extras, hasSnapshot, previewLayout.getLayout(), unownedIds));
+			{
+				slayerToggle.setVisible(showSlayerToggle);
+				showPreview(resolutions, invResolution, extras, hasSnapshot, previewLayout.getLayout(), unownedIds);
+			});
 		});
 	}
 
@@ -1460,6 +1492,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		tierCombo.setVisible(false);
 		setupCombo.setVisible(false);
 		inventoryCombo.setVisible(false);
+		slayerToggle.setVisible(false);
 		recommendedToggle.setVisible(false);
 		wikiLinkButton.setVisible(false);
 		tagNameField.setText("");
