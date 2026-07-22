@@ -25,6 +25,7 @@ import com.wikigearsetups.wiki.InventoryParser;
 import com.wikigearsetups.wiki.InventorySetup;
 import com.wikigearsetups.wiki.PageDiscovery;
 import com.wikigearsetups.wiki.SearchResult;
+import com.wikigearsetups.wiki.SetupPairing;
 import com.wikigearsetups.wiki.SourceScorer;
 import com.wikigearsetups.wiki.WikiClient;
 import java.awt.BorderLayout;
@@ -43,6 +44,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -60,6 +62,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ImageIcon;
@@ -157,6 +160,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private List<SetupResolution> currentResolutions;
 	private InventoryResolution currentInventoryResolution;
 	private List<Integer> currentExtras = Collections.emptyList();
+	/** Inventory index per setup index from the page's order, or empty. */
+	private int[] inventoryPairing = SetupPairing.NONE;
 	private boolean updatingCombos;
 	private boolean userPickedInventory;
 	private boolean userEditedTag;
@@ -698,11 +703,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 				tryCandidates(candidates, index + 1);
 				return;
 			}
-			List<InventorySetup> inventories = inventoryParser.parse(wikitext);
+			// example columns own their inventories; they shouldn't also appear
+			// as standalone choices for the ranked setups
+			List<InventorySetup> inventories = ExampleSetupParser.withoutExampleInventories(
+				inventoryParser.parse(wikitext), examples);
+			// which inventory belongs to which setup, from their page order
+			int[] pairing = SetupPairing.pair(wikitext, setups.size(), inventories.size());
 			List<String> drops = dropsParser.parse(wikitext);
 			SwingUtilities.invokeLater(() ->
 			{
-				showSetups(candidate, setups, inventories, examples);
+				showSetups(candidate, setups, inventories, examples, pairing);
 				applyDrops(candidate, drops);
 			});
 			if (drops.isEmpty())
@@ -779,14 +789,13 @@ public class WikiGearSetupsPanel extends PluginPanel
 	}
 
 	private void showSetups(String pageTitle, List<GearSetup> setups, List<InventorySetup> inventories,
-		List<ExampleSetup> examples)
+		List<ExampleSetup> examples, int[] pairing)
 	{
 		currentPageTitle = pageTitle;
-		pageSetups = setups;
-		// example columns own their inventories; they shouldn't also appear as
-		// standalone choices for the ranked setups
-		pageInventories = ExampleSetupParser.withoutExampleInventories(inventories, examples);
+		pageSetups = disambiguate(setups);
+		pageInventories = inventories;
 		pageExamples = examples;
+		inventoryPairing = pairing;
 		pageDropNames = Collections.emptyList();
 		userPickedInventory = false;
 		userEditedTag = false;
@@ -861,9 +870,14 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		DefaultComboBoxModel<String> invModel = new DefaultComboBoxModel<>();
 		invModel.addElement(NO_INVENTORY);
+		List<String> invLabels = new ArrayList<>(pageInventories.size());
 		for (InventorySetup inventory : pageInventories)
 		{
-			invModel.addElement("Inv: " + inventory.getLabel());
+			invLabels.add(inventory.getLabel());
+		}
+		for (String label : uniquify(invLabels))
+		{
+			invModel.addElement("Inv: " + label);
 		}
 		inventoryCombo.setModel(invModel);
 		inventoryCombo.setVisible(!pageInventories.isEmpty());
@@ -968,8 +982,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 	/**
 	 * A lone inventory is obviously the right one — select it. With several,
-	 * pick the one whose label matches the chosen style; otherwise leave the
-	 * manual choice alone.
+	 * prefer the one the page's own order pairs to this setup, since half the
+	 * pages label every inventory "Inventory" and the labels can't tell them
+	 * apart. Fall back to label matching, then leave the choice alone.
 	 */
 	private void autoSelectInventory()
 	{
@@ -987,6 +1002,17 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			return;
 		}
+
+		if (setupIdx < inventoryPairing.length)
+		{
+			int paired = inventoryPairing[setupIdx];
+			if (paired >= 0 && paired < currentInventories.size())
+			{
+				inventoryCombo.setSelectedIndex(paired + 1);
+				return;
+			}
+		}
+
 		List<String> labels = new ArrayList<>();
 		for (InventorySetup inventory : currentInventories)
 		{
@@ -997,6 +1023,52 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			inventoryCombo.setSelectedIndex(match + 1);
 		}
+	}
+
+	/**
+	 * Makes repeated {@code |style=} labels distinct.
+	 *
+	 * Several pages give two setups the same style ("Melee" twice on Royal
+	 * Titans). Identical dropdown entries are unpickable, and worse, they slug
+	 * to the same tag — so importing the second would silently replace the
+	 * first tab.
+	 */
+	static List<GearSetup> disambiguate(List<GearSetup> setups)
+	{
+		List<String> labels = new ArrayList<>(setups.size());
+		for (GearSetup setup : setups)
+		{
+			labels.add(setup.getStyleLabel());
+		}
+		labels = uniquify(labels);
+
+		List<GearSetup> out = new ArrayList<>(setups.size());
+		for (int i = 0; i < setups.size(); i++)
+		{
+			GearSetup setup = setups.get(i);
+			out.add(labels.get(i).equals(setup.getStyleLabel())
+				? setup
+				: new GearSetup(labels.get(i), setup.getSlots()));
+		}
+		return out;
+	}
+
+	/**
+	 * Numbers repeats so every entry in a dropdown is distinct. Pages do give
+	 * two things the same name — Corporeal Beast lists "Best in slot" twice —
+	 * and an entry you can't tell apart from its neighbour is one you can't
+	 * deliberately choose.
+	 */
+	static List<String> uniquify(List<String> labels)
+	{
+		Map<String, Integer> seen = new HashMap<>();
+		List<String> out = new ArrayList<>(labels.size());
+		for (String label : labels)
+		{
+			int count = seen.merge(label, 1, Integer::sum);
+			out.add(count == 1 ? label : label + " (" + count + ")");
+		}
+		return out;
 	}
 
 	private void resolveSelection()
@@ -1498,6 +1570,69 @@ public class WikiGearSetupsPanel extends PluginPanel
 		Integer icon = selectedIcon != null ? selectedIcon.itemId : null;
 
 		importButton.setEnabled(false);
+		// what's already under that name has to be read on the client thread,
+		// but asking about it has to happen on the EDT
+		clientThread.invokeLater(() ->
+		{
+			BankTagImporter.Existing existing;
+			try
+			{
+				existing = importer.existing(tag);
+			}
+			catch (Exception e)
+			{
+				log.warn("Could not check for an existing tab", e);
+				existing = BankTagImporter.Existing.NONE;
+			}
+			BankTagImporter.Existing found = existing;
+			SwingUtilities.invokeLater(() ->
+			{
+				if (found != BankTagImporter.Existing.NONE && !confirmOverwrite(tag, found))
+				{
+					status("Import cancelled — '" + tag + "' left alone", null);
+					importButton.setEnabled(true);
+					return;
+				}
+				runImport(tag, resolutions, invResolution, extras, icon);
+			});
+		});
+	}
+
+	/**
+	 * Asks before replacing a tab. Overwriting is usually what the player
+	 * wants — it's how a setup gets refreshed after an upgrade — but a tab
+	 * they built by hand is not recoverable, so the wording leads with whose
+	 * it is and the safe option is the default.
+	 */
+	private boolean confirmOverwrite(String tag, BankTagImporter.Existing existing)
+	{
+		boolean ours = existing == BankTagImporter.Existing.OURS;
+		String message = "<html><body style='width:260px'>"
+			+ (ours
+				? "The bank tag <b>" + escapeHtml(tag) + "</b> was imported by this plugin before."
+					+ "<br><br>Importing again replaces its items and layout with the setup shown here."
+				: "There is already a bank tag named <b>" + escapeHtml(tag) + "</b> that this plugin"
+					+ " didn't create.<br><br>Importing replaces its items and layout. If you arranged"
+					+ " that tab yourself, those changes can't be recovered.")
+			+ "<br><br>You can import under a different name by editing the Name field first."
+			+ "</body></html>";
+
+		String[] options = {ours ? "Replace" : "Replace anyway", "Cancel"};
+		int choice = JOptionPane.showOptionDialog(this, message,
+			ours ? "Update this tab?" : "Overwrite an existing tab?",
+			JOptionPane.YES_NO_OPTION, ours ? JOptionPane.QUESTION_MESSAGE : JOptionPane.WARNING_MESSAGE,
+			null, options, options[1]);
+		return choice == JOptionPane.YES_OPTION;
+	}
+
+	private static String escapeHtml(String s)
+	{
+		return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+	}
+
+	private void runImport(String tag, List<SetupResolution> resolutions,
+		InventoryResolution invResolution, List<Integer> extras, Integer icon)
+	{
 		clientThread.invokeLater(() ->
 		{
 			try

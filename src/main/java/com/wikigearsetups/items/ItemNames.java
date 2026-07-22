@@ -13,11 +13,15 @@ public final class ItemNames
 	 * Lowercase, straight apostrophes, collapsed whitespace, and no space
 	 * before parentheses — the game is inconsistent ("Salve amulet(i)" but
 	 * "Ring of suffering (i)") and the wiki always writes the space.
+	 *
+	 * Underscores become spaces: links are sometimes written in URL form
+	 * ("{{plink|Blessed_bracers}}"), and no item name contains one.
 	 */
 	public static String normalize(String name)
 	{
 		return name
 			.replace('’', '\'')
+			.replace('_', ' ')
 			.toLowerCase(Locale.ROOT)
 			.replaceAll("\\s+\\(", "(")
 			.replaceAll("\\s+", " ")

@@ -1,11 +1,13 @@
 package com.wikigearsetups.layout;
 
+import com.wikigearsetups.WikiGearSetupsConfig;
 import com.wikigearsetups.bank.InventoryPick;
 import com.wikigearsetups.bank.InventoryResolution;
 import com.wikigearsetups.bank.SetupResolution;
 import com.wikigearsetups.bank.SlotPick;
 import com.wikigearsetups.wiki.EquipSlot;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,6 +16,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.plugins.PluginManager;
 import net.runelite.client.plugins.banktags.BankTagsPlugin;
 import net.runelite.client.plugins.banktags.TagManager;
@@ -40,19 +43,24 @@ public class BankTagImporter
 {
 	static final int DEFAULT_ICON_ITEM_ID = 952; // spade
 
+	/** Newline-separated tag names this plugin has written, per profile. */
+	static final String IMPORTED_TAGS_KEY = "importedTags";
+
 	private final TagManager tagManager;
 	private final LayoutManager layoutManager;
 	private final TabManager tabManager;
 	private final PluginManager pluginManager;
+	private final ConfigManager configManager;
 
 	@Inject
 	public BankTagImporter(TagManager tagManager, LayoutManager layoutManager,
-		TabManager tabManager, PluginManager pluginManager)
+		TabManager tabManager, PluginManager pluginManager, ConfigManager configManager)
 	{
 		this.tagManager = tagManager;
 		this.layoutManager = layoutManager;
 		this.tabManager = tabManager;
 		this.pluginManager = pluginManager;
+		this.configManager = configManager;
 	}
 
 	public boolean isBankTagsEnabled()
@@ -62,6 +70,54 @@ public class BankTagImporter
 			.findFirst()
 			.map(pluginManager::isPluginEnabled)
 			.orElse(false);
+	}
+
+	/** What is already sitting under a tag name, so the user can be asked first. */
+	public enum Existing
+	{
+		/** Nothing — importing creates something new. */
+		NONE,
+		/** A tab this plugin wrote before; re-importing is the normal refresh path. */
+		OURS,
+		/** A tab or layout the plugin didn't create — almost certainly hand-made. */
+		FOREIGN,
+	}
+
+	/**
+	 * Whether importing under {@code tag} would replace something, and whose
+	 * it is. Client thread only — reads the Bank Tags in-memory state.
+	 *
+	 * Ownership is tracked rather than inferred: a tag we have imported before
+	 * is recorded in config, so anything else that exists is the player's.
+	 */
+	public Existing existing(String tag)
+	{
+		boolean present = tabManager.find(tag) != null || layoutManager.loadLayout(tag) != null;
+		if (!present)
+		{
+			return Existing.NONE;
+		}
+		return importedTags().contains(tag) ? Existing.OURS : Existing.FOREIGN;
+	}
+
+	private Set<String> importedTags()
+	{
+		String stored = configManager.getConfiguration(WikiGearSetupsConfig.GROUP, IMPORTED_TAGS_KEY);
+		if (stored == null || stored.isEmpty())
+		{
+			return new LinkedHashSet<>();
+		}
+		return new LinkedHashSet<>(Arrays.asList(stored.split("\n")));
+	}
+
+	private void rememberImported(String tag)
+	{
+		Set<String> tags = importedTags();
+		if (tags.add(tag))
+		{
+			configManager.setConfiguration(WikiGearSetupsConfig.GROUP, IMPORTED_TAGS_KEY,
+				String.join("\n", tags));
+		}
 	}
 
 	/** Single-setup convenience. */
@@ -147,6 +203,7 @@ public class BankTagImporter
 			existing.setIconItemId(icon);
 		}
 		tabManager.save();
+		rememberImported(tag);
 
 		log.debug("Imported bank tag '{}': {} items ({} gear blocks, {} inventory slots)",
 			tag, itemIds.size(), gearBlocks.size(), inventoryPicks.size());

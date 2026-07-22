@@ -1,8 +1,14 @@
 package com.wikigearsetups.wiki;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +35,30 @@ public class InventoryParser
 	private static final int SLOTS = 28;
 	private static final int RUNE_SLOTS = 4;
 
-	/** Tabber pane openers: "<tabber>\nLabel=", "|-|\nLabel=", or "|-|Label=". */
+	/**
+	 * Joins the candidates of a choice template into one slot value. No item
+	 * name contains it, so splitting back out is unambiguous.
+	 */
+	public static final String CHOICE_SEPARATOR = " / ";
+
+	/**
+	 * Tabber pane openers: "<tabber>Label=", "|-|Label=", or the label on a
+	 * later line — blank lines between the separator and the label are common
+	 * and must not break the match.
+	 */
 	private static final Pattern PANE_LABEL =
-		Pattern.compile("(?m)^(?:<tabber>[ \\t]*\\n?[ \\t]*|\\|-\\|[ \\t]*\\n?[ \\t]*)([^=\\n|{}]+?)[ \\t]*=");
+		Pattern.compile("(?m)^(?:<tabber>|\\|-\\|)[ \\t]*(?:\\n[ \\t]*)*([^=\\n|{}]+?)[ \\t]*=");
 	private static final Pattern HEADING = Pattern.compile("(?m)^={2,5}\\s*(.+?)\\s*={2,5}\\s*$");
+
+	/**
+	 * Headings that describe what the template <em>is</em> rather than which
+	 * setup it belongs to. Pages routinely put "==Inventory==" immediately
+	 * above every {{Inventory}}, which would otherwise give every inventory
+	 * on the page the same label and make the dropdown unusable.
+	 */
+	private static final Set<String> GENERIC_LABELS = new HashSet<>(Arrays.asList(
+		"inventory", "inventories", "equipment", "gear", "setup", "setups",
+		"loadout", "loadouts", "items", "recommended equipment"));
 
 	private static final class Pending
 	{
@@ -178,7 +204,7 @@ public class InventoryParser
 	 */
 	static String cleanSlotValue(String value)
 	{
-		String stripped = stripMarkup(value);
+		String stripped = stripQuantity(stripMarkup(value));
 		if (!stripped.isEmpty())
 		{
 			return stripped;
@@ -189,34 +215,95 @@ public class InventoryParser
 			int end = findTemplateEnd(value, t);
 			if (end > 0)
 			{
-				return templateName(value.substring(t + 2, end - 2));
+				String body = value.substring(t + 2, end - 2);
+				String choices = choiceList(body);
+				return choices.isEmpty() ? templateName(body) : choices;
 			}
 		}
 		return "";
 	}
 
-	/** Nearest preceding tabber pane label or heading, else "Inventory N". */
+	/**
+	 * Some templates carry their own candidates rather than naming one item:
+	 * {{MinPrice|format=item|link=n|Manta ray|Tuna potato|Anglerfish|Dark
+	 * crab}} means "whichever of these is cheapest". Their unnamed parameters
+	 * are the candidate list, emitted joined so the resolver can treat it the
+	 * same way as a hand-listed placeholder.
+	 *
+	 * Empty unless there are at least two candidates — a single unnamed
+	 * parameter is far more likely to be an argument than a choice.
+	 */
+	static String choiceList(String templateBody)
+	{
+		List<String> parts = splitTopLevel(templateBody, '|');
+		List<String> choices = new ArrayList<>();
+		for (int p = 1; p < parts.size(); p++)
+		{
+			if (indexOfTopLevel(parts.get(p), '=') >= 0)
+			{
+				continue; // format=, link=, align= …
+			}
+			String choice = stripMarkup(parts.get(p));
+			if (!choice.isEmpty())
+			{
+				choices.add(choice);
+			}
+		}
+		return choices.size() < 2 ? "" : String.join(CHOICE_SEPARATOR, choices);
+	}
+
+	/**
+	 * The template writes a stack size after a backslash ("Blood rune\16000",
+	 * overwhelmingly in {{Rune pouch}}). No item name contains a backslash,
+	 * so anything from the first one on is quantity, not name.
+	 */
+	static String stripQuantity(String value)
+	{
+		int slash = value.indexOf('\\');
+		return slash < 0 ? value : value.substring(0, slash).trim();
+	}
+
+	/**
+	 * The nearest preceding tabber pane label or heading that actually says
+	 * which setup this is, else "Inventory N".
+	 *
+	 * "Nearest" alone is not enough: a page that writes "==Inventory==" above
+	 * every template would label all of them "Inventory". Generic headings
+	 * are therefore stepped over in favour of the enclosing pane label
+	 * ("Melee", "Magic") further back, and only used if nothing better exists.
+	 */
 	static String labelFor(String wikitext, int templateStart, int index)
 	{
 		String before = wikitext.substring(0, templateStart);
-		int bestPos = -1;
-		String best = null;
+		NavigableMap<Integer, String> candidates = new TreeMap<>();
 
 		Matcher pane = PANE_LABEL.matcher(before);
 		while (pane.find())
 		{
-			bestPos = pane.start();
-			best = pane.group(1).trim();
+			candidates.put(pane.start(), pane.group(1).trim());
 		}
 		Matcher heading = HEADING.matcher(before);
 		while (heading.find())
 		{
-			if (heading.start() > bestPos)
+			candidates.put(heading.start(), stripMarkup(heading.group(1)));
+		}
+
+		String nearest = null;
+		for (String label : candidates.descendingMap().values())
+		{
+			if (label.isEmpty())
 			{
-				bestPos = heading.start();
-				best = stripMarkup(heading.group(1));
+				continue;
+			}
+			if (nearest == null)
+			{
+				nearest = label;
+			}
+			if (!GENERIC_LABELS.contains(label.toLowerCase(Locale.ROOT)))
+			{
+				return label;
 			}
 		}
-		return best != null && !best.isEmpty() ? best : "Inventory " + index;
+		return nearest != null ? nearest : "Inventory " + index;
 	}
 }

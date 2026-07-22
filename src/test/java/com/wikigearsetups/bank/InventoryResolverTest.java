@@ -229,4 +229,33 @@ public class InventoryResolverTest
 		assertEquals(fireRune, res.getRunePicks().get(0).getItemId());
 		assertEquals(0, res.getRunePicks().get(0).getSlot());
 	}
+
+	/**
+	 * {{MinPrice|…|Manta ray|Tuna potato|…}} means "whichever of these" — the
+	 * parser joins the options into the slot, and the owned one wins, exactly
+	 * like a hand-listed {{Cheap food}}.
+	 */
+	@Test
+	public void choiceTemplateSlotPicksTheOwnedOption()
+	{
+		InventoryResolution r = resolver.resolve(
+			setup("Manta ray / Tuna potato / Shark / Dark crab"),
+			Collections.singleton(SHARK), MissingGearBehavior.OMIT);
+
+		assertEquals(1, r.getPicks().size());
+		assertEquals(SHARK, r.getPicks().get(0).getItemId());
+		assertTrue(r.getPicks().get(0).isOwned());
+		assertTrue("a resolved choice isn't unrecognized", r.getUnresolvedNames().isEmpty());
+	}
+
+	@Test
+	public void choiceTemplateWithNothingOwnedIsCountedMissingNotUnrecognized()
+	{
+		InventoryResolution r = resolver.resolve(
+			setup("Manta ray / Tuna potato / Shark"),
+			Collections.emptySet(), MissingGearBehavior.SHOW_BEST_UNOWNED);
+
+		assertTrue(r.getUnresolvedNames().isEmpty());
+		assertEquals(1, r.getMissingCount());
+	}
 }

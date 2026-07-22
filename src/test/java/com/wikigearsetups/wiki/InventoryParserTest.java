@@ -7,6 +7,8 @@ import java.util.List;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -119,5 +121,85 @@ public class InventoryParserTest
 	{
 		InventorySetup first = parser.parse(fixture("zulrah-strategies")).get(0);
 		assertEquals(java.util.Arrays.asList("Fire rune", "Blood rune", "Cosmic rune"), first.getRunes());
+	}
+
+	/**
+	 * {{Rune pouch}} writes stack sizes after a backslash. Keeping them made
+	 * every rune on nine of the pages sampled fail to resolve.
+	 */
+	@Test
+	public void runeStackSizesAreStrippedFromNames() throws IOException
+	{
+		int named = 0;
+		for (InventorySetup setup : parser.parse(fixture("general-graardor-strategies")))
+		{
+			for (String rune : setup.getRunes())
+			{
+				assertFalse("stack size left on '" + rune + "'", rune.contains("\\"));
+				named++;
+			}
+		}
+		assertTrue("expected this page's rune pouches to parse, got none", named >= 2);
+	}
+
+	@Test
+	public void quantitiesAreStrippedFromInventorySlotsToo()
+	{
+		assertEquals("Blisterwood stake", InventoryParser.stripQuantity("Blisterwood stake\\12"));
+		assertEquals("Ruby dragon bolts (e)", InventoryParser.stripQuantity("Ruby dragon bolts (e)\\500"));
+		assertEquals("Shark", InventoryParser.stripQuantity("Shark"));
+	}
+
+	/**
+	 * These pages head every single inventory "==Inventory==", so the nearest
+	 * heading tells the reader nothing. The pane label further back does.
+	 */
+	@Test
+	public void genericHeadingsFallBackToTheTabberPaneLabel() throws IOException
+	{
+		List<InventorySetup> setups = parser.parse(fixture("general-graardor-strategies"));
+		assertEquals(8, setups.size());
+
+		List<String> labels = new java.util.ArrayList<>();
+		for (InventorySetup setup : setups)
+		{
+			assertNotEquals("generic heading used as a label", "Inventory", setup.getLabel());
+			labels.add(setup.getLabel());
+		}
+		assertEquals("labels should be distinguishable", labels.size(),
+			new java.util.HashSet<>(labels).size());
+		assertEquals("Melee", labels.get(0));
+		assertEquals("Magic", labels.get(1));
+		assertEquals("Ranged", labels.get(2));
+	}
+
+	/** A template that lists its own options becomes that list, not its name. */
+	@Test
+	public void choiceTemplatesBecomeTheirCandidateList()
+	{
+		assertEquals("Manta ray / Tuna potato / Anglerfish / Dark crab",
+			InventoryParser.cleanSlotValue(
+				"{{MinPrice|format=item|link=n|Manta ray|Tuna potato|Anglerfish|Dark crab}}"));
+	}
+
+	@Test
+	public void placeholderTemplatesWithNoOptionsKeepTheirName()
+	{
+		assertEquals("Cheap food", InventoryParser.cleanSlotValue("{{Cheap food}}"));
+	}
+
+	@Test
+	public void muspahChoiceSlotsResolveToOptionsNotTemplateNames() throws IOException
+	{
+		boolean sawChoice = false;
+		for (InventorySetup setup : parser.parse(fixture("phantom-muspah-strategies")))
+		{
+			for (String slot : setup.getSlots())
+			{
+				assertNotEquals("raw template name left in a slot", "MinPrice", slot);
+				sawChoice |= slot.contains(InventoryParser.CHOICE_SEPARATOR);
+			}
+		}
+		assertTrue("expected at least one choice slot on this page", sawChoice);
 	}
 }

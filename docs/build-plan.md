@@ -149,5 +149,23 @@ Status legend: [ ] todo · [x] done · [~] in progress
 - [x] 19 new tests; 166 total green
 - [ ] User visual verification in dev client
 
+## 39-page live sweep + fixes (2026-07-22)
+Method: 39 untested `/Strategies` pages fetched through the plugin's own PageDiscovery order, run through the real parsers; all 793 extracted names checked against the wiki namespace; OwnershipResolver driven with five synthetic banks. Held up: 39/39 parsed, 0 failures, 38/40 shorthand searches correct, SourceScorer right on all 39.
+- [x] **Rune pouch quantities** — `{{Rune pouch}}` writes `Fire rune\16000`; `InventoryParser.stripQuantity` drops it. Was 94 unresolvable values across 9 pages (Cerberus, Colosseum, Zilyana, Graardor, Giant Mole, Inferno, KQ, Kree'arra, Tempoross)
+- [x] **Inventory labels** — pages head every inventory `==Inventory==`, so `labelFor` stepped over generic headings ("inventory"/"equipment"/"gear"/"setup"/"loadout"/"items") to the enclosing tabber pane label; PANE_LABEL also relaxed to cross blank lines after `|-|`. Duplicate-label pages 19 → 3
+- [x] **`SetupPairing`** — pairs gear↔inventory by page order (interleaved `EIEI`, or blocked `EEEIII` with equal counts); count mismatch with the parsed models disables it rather than mispairing. Found on 18 pages; drives `autoSelectInventory` ahead of `InventoryMatcher`
+- [x] **Duplicate labels numbered** — `uniquify` on both style and inventory labels ("Melee", "Melee (2)"). Was 6 tag-name collisions across 4 pages where the second import silently replaced the first tab
+- [x] **Choice templates** — `{{MinPrice|format=item|link=n|Manta ray|Tuna potato|…}}` (17 uses on Phantom Muspah, 13 in one inventory) expands to its unnamed params, joined by `CHOICE_SEPARATOR` and split by `PlaceholderItems` so the existing owned-first path handles it
+- [x] **Generic names** — `ItemAliases`: god d'hide × 6 slots × every spelling the pages use, blessings, halos, diary reward tiers (highest first), Wintertodt warm clothing; `ItemNames.normalize` maps `_` → space (`{{plink|Blessed_bracers}}`). All 85 concrete names verified to exist on the wiki
+- [x] **Overwrite confirmation** — `BankTagImporter.existing()` returns NONE/OURS/FOREIGN (imported tags recorded in config); panel checks on the client thread, asks on the EDT, defaults to Cancel and warns harder for a tab the plugin didn't create
+- [x] 32 new tests; 202 green. Fixtures: general-graardor-strategies, phantom-muspah-strategies
+- [ ] User visual verification in dev client
+
+### Left from the sweep (not done)
+- [ ] No record of tabs the plugin created — no list, refresh, or remove; every return trip starts at the search box
+- [ ] "Show wiki BIS" resets each session (maxed accounts re-tick it on every page)
+- [ ] Big dropdowns are flat — Yama's 13 inventories mix per-style and per-mechanic loadouts with no grouping
+- [ ] Search: "gwd" finds nothing; "nightmare" ranks Nightmare Zone above The Nightmare
+
 ## Next
 - [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)

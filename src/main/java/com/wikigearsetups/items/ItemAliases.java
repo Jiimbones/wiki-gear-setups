@@ -25,6 +25,13 @@ public final class ItemAliases
 	private static final Map<String, List<String>> UPGRADES = new HashMap<>();
 	private static final Map<String, List<String>> EQUIVALENT = new HashMap<>();
 
+	private static final String[] GODS = {
+		"Guthix", "Saradomin", "Zamorak", "Ancient", "Armadyl", "Bandos",
+	};
+
+	/** Diary rewards exist as tiers 1-4; the wiki writes the bare family name. */
+	private static final int DIARY_TIERS = 4;
+
 	static
 	{
 		// interchangeable within their tier: the wiki names one god cape but
@@ -40,6 +47,47 @@ public final class ItemAliases
 		generic("God book",
 			"Holy book", "Book of balance", "Unholy book",
 			"Book of law", "Book of war", "Book of darkness");
+
+		// God ("blessed") d'hide: the wiki names the set, the game names the
+		// god. Every piece is identical in stats, so any of them will do —
+		// and pages write the same slot half a dozen different ways.
+		godDhide("d'hide body", "Blessed body", "Blessed d'hide body",
+			"Blessed dragonhide body", "Blessed dragonhide chestplate");
+		godDhide("chaps", "Blessed chaps", "Blessed d'hide chaps",
+			"Blessed dragonhide chaps", "Blessed dragonhide legs");
+		godDhide("d'hide boots", "Blessed boots", "Blessed d'hide boots",
+			"Blessed dragonhide boots");
+		godDhide("coif", "Blessed coif", "Blessed d'hide coif", "Blessed dragonhide coif");
+		godDhide("bracers", "Blessed bracers", "Blessed vambraces",
+			"Blessed d'hide vambraces", "Blessed dragonhide vambraces");
+		godDhide("d'hide shield", "Blessed shield", "Blessed d'hide shield",
+			"Blessed dragonhide shield");
+		godDhide("halo", "Halo");
+
+		generic("Blessing", "Holy blessing", "Unholy blessing", "Peaceful blessing",
+			"War blessing", "Honourable blessing", "Ancient blessing");
+
+		// Diary rewards: the wiki names the family, the game numbers the tier.
+		// Highest first so the ownership walk lands on the best one held.
+		diaryTiers("Ardougne cloak");
+		diaryTiers("Explorer's ring");
+		diaryTiers("Rada's blessing");
+		diaryTiers("Karamja gloves");
+		diaryTiers("Desert amulet");
+		diaryTiers("Morytania legs");
+		diaryTiers("Fremennik sea boots");
+		diaryTiers("Falador shield");
+		diaryTiers("Varrock armour");
+
+		// Wintertodt asks for "warm clothing" without naming anything. Best
+		// first: the torch also lights braziers, so it earns the top spot.
+		generic("Warm clothing",
+			"Bruma torch", "Warm gloves", "Infernal cape", "Fire cape",
+			"Clue hunter garb", "Clue hunter trousers", "Clue hunter gloves",
+			"Clue hunter boots", "Clue hunter cloak",
+			"Santa hat", "Woolly hat", "Woolly scarf", "Bomber jacket", "Bomber cap",
+			"Yak-hide armour (top)", "Yak-hide armour (legs)",
+			"Polar camo top", "Polar camo legs");
 
 		upgrade("Rune pouch", "Rune pouch (l)", "Divine rune pouch", "Divine rune pouch (l)");
 		upgrade("Divine rune pouch", "Divine rune pouch (l)");
@@ -79,6 +127,34 @@ public final class ItemAliases
 	private static void generic(String name, String... concrete)
 	{
 		GENERIC.put(ItemNames.normalize(name), Arrays.asList(concrete));
+	}
+
+	/**
+	 * Registers every way the pages write one god-armour slot against the six
+	 * concrete gods' pieces ("Blessed d'hide body" and "Blessed body" both
+	 * accept "Guthix d'hide body" and its five siblings).
+	 */
+	private static void godDhide(String piece, String... wikiNames)
+	{
+		List<String> concrete = new ArrayList<>(GODS.length);
+		for (String god : GODS)
+		{
+			concrete.add(god + " " + piece);
+		}
+		for (String wikiName : wikiNames)
+		{
+			GENERIC.put(ItemNames.normalize(wikiName), concrete);
+		}
+	}
+
+	private static void diaryTiers(String family)
+	{
+		List<String> tiers = new ArrayList<>(DIARY_TIERS);
+		for (int tier = DIARY_TIERS; tier >= 1; tier--)
+		{
+			tiers.add(family + " " + tier);
+		}
+		GENERIC.put(ItemNames.normalize(family), tiers);
 	}
 
 	private static void upgrade(String name, String... betterItems)

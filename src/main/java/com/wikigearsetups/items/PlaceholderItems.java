@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * The wiki fills some inventory slots with placeholder templates instead of
@@ -32,10 +33,31 @@ public final class PlaceholderItems
 	{
 	}
 
-	/** Concrete candidates for a placeholder name, or empty if not a known placeholder. */
+	/**
+	 * Joins candidates a choice template listed for itself. Mirrors
+	 * {@code InventoryParser.CHOICE_SEPARATOR} — kept here as a literal so the
+	 * items package doesn't depend on the wiki package.
+	 */
+	private static final String CHOICE_SEPARATOR = " / ";
+
+	/**
+	 * Concrete candidates for a placeholder name, or empty if not a
+	 * placeholder at all.
+	 *
+	 * Two sources: the table above, for templates that name a class of item
+	 * without listing it ({{Cheap food}}), and the slot value itself, for
+	 * templates that carry their own list ({{MinPrice|Manta ray|Tuna
+	 * potato|…}}) and are joined by the parser.
+	 */
 	public static List<String> candidatesFor(String name)
 	{
 		List<String> candidates = CANDIDATES.get(ItemNames.normalize(name));
-		return candidates == null ? Collections.emptyList() : candidates;
+		if (candidates != null)
+		{
+			return candidates;
+		}
+		return name.contains(CHOICE_SEPARATOR)
+			? Arrays.asList(name.split(Pattern.quote(CHOICE_SEPARATOR)))
+			: Collections.emptyList();
 	}
 }
