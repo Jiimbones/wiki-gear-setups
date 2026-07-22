@@ -288,6 +288,22 @@ public class OwnershipResolver
 	{
 		for (ItemSets.PieceGroup group : requirement.getOtherPieces())
 		{
+			// Owning the weapon is enough. Only one can be worn, but a loadout
+			// routinely carries several and swaps between them — Fortis
+			// Colosseum lists fang, bow of faerdhinen and sanguinesti staff in
+			// one slot — so crystal armour is still right when the bow is a
+			// switch that lost the slot to a melee weapon. Armour is not
+			// swapped mid-fight, so those groups stay strict: owning blood
+			// moon body doesn't justify the helm when Bandos wins the slot.
+			if (group.getSlot() == EquipSlot.WEAPON)
+			{
+				if (!anyOwned(group.getNames(), ownedIds))
+				{
+					return false;
+				}
+				continue;
+			}
+
 			SlotPick slotPick = pickBySlot.get(group.getSlot());
 			if (slotPick != null && slotPick.isOwned())
 			{
@@ -410,6 +426,16 @@ public class OwnershipResolver
 		return false;
 	}
 
+	/**
+	 * Phrasings that mean "only when you're on a task". The footnote form
+	 * spells out "Slayer task", but the bare parenthetical the pages use just
+	 * as often does not — "(on task)", "(task only)" — so requiring the word
+	 * "slayer" missed roughly half of them.
+	 */
+	private static final String[] TASK_ONLY_PHRASES = {
+		"on task", "on a task", "task only", "only on task", "while on task",
+	};
+
 	static boolean isSlayerTaskConditional(RankedItem item)
 	{
 		String note = item.getNote();
@@ -418,7 +444,22 @@ public class OwnershipResolver
 			return false;
 		}
 		String n = note.toLowerCase(java.util.Locale.ROOT);
-		return n.contains("slayer") && n.contains("task");
+		if (n.contains("slayer") && n.contains("task"))
+		{
+			return true;
+		}
+		if (!n.contains("task"))
+		{
+			return false;
+		}
+		for (String phrase : TASK_ONLY_PHRASES)
+		{
+			if (n.contains(phrase))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

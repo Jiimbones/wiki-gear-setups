@@ -23,6 +23,10 @@ public class GearSetupParser
 	private static final String TEMPLATE_NAME = "recommended equipment";
 	private static final Pattern SLOT_PARAM = Pattern.compile("([a-z]+)([0-9]+)");
 	private static final Pattern HTML_COMMENT = Pattern.compile("<!--.*?-->", Pattern.DOTALL);
+	/** A balanced parenthetical qualifying the item that precedes it: "(on task)". */
+	private static final Pattern PARENTHETICAL = Pattern.compile("\\(([^()]+)\\)");
+	private static final Pattern REF_BODY =
+		Pattern.compile("<ref[^>]*>(.*?)</ref>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
 	private static final Pattern PIPED_LINK = Pattern.compile("\\[\\[[^\\]|]*\\|([^\\]]*)\\]\\]");
 	private static final Pattern PLAIN_LINK = Pattern.compile("\\[\\[([^\\]|]*)\\]\\]");
 	private static final Pattern NESTED_TEMPLATE = Pattern.compile("\\{\\{[^{}]*\\}\\}");
@@ -181,9 +185,9 @@ public class GearSetupParser
 					// "+{{plinkp|Trouver parchment}}" marks a companion item
 					// (lock the gear at Perdu), not a wearable alternative
 					if (!item.isEmpty() && !item.equalsIgnoreCase("n/a") && !item.equalsIgnoreCase("none")
-						&& !item.equalsIgnoreCase("trouver parchment") && !precededByPlus(v, i))
+						&& !item.equalsIgnoreCase("trouver parchment") && !isCompanion(v, i))
 					{
-						items.add(new RankedItem(item, rank, null, fallbacks));
+						items.add(new RankedItem(item, rank, annotationAfter(v, end), fallbacks));
 					}
 				}
 			}
@@ -207,17 +211,66 @@ public class GearSetupParser
 		return items;
 	}
 
-	private static boolean precededByPlus(String s, int templateStart)
+	/**
+	 * A companion item rather than a wearable alternative: written attached to
+	 * the plus, "{{plink|Fighter torso}}+{{plinkp|Trouver parchment}}".
+	 *
+	 * The plus must touch the template. Pages also use a <em>spaced</em> plus
+	 * to mean "and bring this too" — Fortis Colosseum lists a whole switch
+	 * loadout that way ("Osmumten's fang + Bow of faerdhinen + Sanguinesti
+	 * staff") — and treating those as companions silently dropped real gear
+	 * from the slot.
+	 */
+	private static boolean isCompanion(String s, int templateStart)
 	{
-		for (int j = templateStart - 1; j >= 0; j--)
+		return templateStart > 0 && s.charAt(templateStart - 1) == '+';
+	}
+
+	/**
+	 * Plain text between this template and the next, as a note.
+	 *
+	 * Roughly half the pages qualify a recommendation with a bare
+	 * parenthetical — "{{plink|Slayer helmet (i)}} (on task)" — rather than an
+	 * {{efn}} footnote. Without this those conditions are invisible, and the
+	 * item gets recommended unconditionally.
+	 *
+	 * Only balanced parentheses and &lt;ref&gt; bodies count, so separators
+	 * ("/", "&lt;br&gt;") and the "(or:{{plinkp|…}}" alternative-list opener
+	 * yield nothing.
+	 */
+	static String annotationAfter(String value, int templateEnd)
+	{
+		int next = value.indexOf("{{", templateEnd);
+		String trailing = value.substring(templateEnd, next < 0 ? value.length() : next);
+		if (trailing.isEmpty())
 		{
-			char c = s.charAt(j);
-			if (!Character.isWhitespace(c))
-			{
-				return c == '+';
-			}
+			return null;
 		}
-		return false;
+
+		StringBuilder note = new StringBuilder();
+		Matcher ref = REF_BODY.matcher(trailing);
+		while (ref.find())
+		{
+			append(note, stripMarkup(ref.group(1)));
+		}
+		Matcher paren = PARENTHETICAL.matcher(REF_BODY.matcher(trailing).replaceAll(""));
+		while (paren.find())
+		{
+			append(note, stripMarkup(paren.group(1)));
+		}
+		return note.length() == 0 ? null : note.toString();
+	}
+
+	private static void append(StringBuilder note, String text)
+	{
+		if (text != null && !text.trim().isEmpty())
+		{
+			if (note.length() > 0)
+			{
+				note.append("; ");
+			}
+			note.append(text.trim());
+		}
 	}
 
 	/**

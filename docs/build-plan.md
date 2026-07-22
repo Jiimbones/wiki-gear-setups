@@ -167,5 +167,16 @@ Method: 39 untested `/Strategies` pages fetched through the plugin's own PageDis
 - [ ] Big dropdowns are flat — Yama's 13 inventories mix per-style and per-mechanic loadouts with no grouping
 - [ ] Search: "gwd" finds nothing; "nightmare" ranks Nightmare Zone above The Nightmare
 
+## Live-test round (2026-07-22)
+- [x] **`+` notation** — `precededByPlus` dropped every item after a plus; pages use a *spaced* plus for "and bring this too". Narrowed to the attached form (`+{{plinkp|Trouver parchment}}`). Colosseum Budget was losing Bow of faerdhinen, Sanguinesti staff, Venator bow, Crystal helm and Crystal body
+- [x] **Plain-text conditions** — `parseItems` only read `{{...}}`, so "(on task)", "(if on task)", "(task only)" and `<ref>` bodies never became notes. `annotationAfter` captures balanced parentheticals and ref bodies between templates; separators ("/", "<br>") and the "(or:{{plinkp|…}}" opener still yield nothing. `isSlayerTaskConditional` also accepts the short phrasings (it required the word "slayer", which the parentheticals omit)
+- [x] **Weapon set-requirements** — met by owning a listed weapon rather than it winning the slot: only one weapon is worn but a loadout swaps between several, so crystal armour survives a carried bowfa. Armour groups unchanged (blood moon gate intact)
+- [x] 9 new tests; 211 green
+- [ ] User re-verification in dev client
+
+### Known, not fixed
+- Inventory substitution can swap a crossbow for a bow (Muspah: unowned Zaryte crossbow → Twisted bow) when the wiki lists them in one ladder. Bolt-proc content makes the bow unsuitable, but the wiki's own ladder says otherwise and a name-based crossbow/bow filter would be crude — left alone deliberately
+- A `+` switch loadout collapses into one slot's alternatives, so only one of "fang + bowfa + sang" is worn and the rest surface as owned alternates below the layout. Closest fit to a one-item-per-slot model
+
 ## Next
 - [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)

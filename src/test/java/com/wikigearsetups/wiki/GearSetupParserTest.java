@@ -297,4 +297,69 @@ public class GearSetupParserTest
 		assertEquals("{{x|y}}", parts.get(1));
 		assertEquals("[[p|q]]", parts.get(2));
 	}
+
+	/**
+	 * A spaced plus means "and bring this too" — Fortis Colosseum lists a
+	 * whole switch loadout that way. Treating it like the attached companion
+	 * notation silently dropped the bow of faerdhinen, sanguinesti staff and
+	 * venator bow out of the weapon slot, and the crystal set out of the rest.
+	 */
+	@Test
+	public void spacedPlusListsExtraGearRatherThanACompanion()
+	{
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Budget"
+			+ "|weapon1={{plink|Osmumten's fang}} / {{plink|Noxious halberd}}"
+			+ " + {{plink|Bow of faerdhinen}} + {{plink|Sanguinesti staff}}"
+			+ "|legs1={{plink|Crystal legs}}}}");
+
+		List<String> weapons = new java.util.ArrayList<>();
+		for (RankedItem item : setups.get(0).getSlots().get(EquipSlot.WEAPON))
+		{
+			weapons.add(item.getName());
+		}
+		assertEquals(Arrays.asList("Osmumten's fang", "Noxious halberd",
+			"Bow of faerdhinen", "Sanguinesti staff"), weapons);
+	}
+
+	/**
+	 * Roughly half the pages qualify a recommendation with a bare
+	 * parenthetical instead of an {{efn}}. Without capturing it, the slayer
+	 * helmet was recommended unconditionally and the "On a slayer task"
+	 * checkbox never appeared.
+	 */
+	@Test
+	public void trailingParentheticalBecomesTheNote()
+	{
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Melee"
+			+ "|head1={{plink|Slayer helmet (i)}} (on task)"
+			+ "|head2={{plink|Neitiznot faceguard}}}}");
+
+		List<RankedItem> head = setups.get(0).getSlots().get(EquipSlot.HEAD);
+		assertEquals("on task", head.get(0).getNote());
+		assertNull("an unqualified item keeps no note", head.get(1).getNote());
+	}
+
+	@Test
+	public void separatorsAndOpenParensAreNotNotes()
+	{
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Melee"
+			+ "|feet1={{plink|Echo boots}}/<br/>{{plink|Guardian boots}}"
+			+ "|head1={{plink|Ahrim's hood}} (or:{{plinkp|Blue moon helm}})}}");
+
+		for (RankedItem item : setups.get(0).getSlots().get(EquipSlot.FEET))
+		{
+			assertNull("a separator is not a note", item.getNote());
+		}
+		assertNull(setups.get(0).getSlots().get(EquipSlot.HEAD).get(0).getNote());
+	}
+
+	@Test
+	public void refBodiesBecomeNotesToo()
+	{
+		List<GearSetup> setups = parser.parse("{{Recommended equipment|style=Melee"
+			+ "|head1={{plink|Slayer helmet (i)}}<ref>Only when on slayer task.</ref>}}");
+
+		assertEquals("Only when on slayer task.",
+			setups.get(0).getSlots().get(EquipSlot.HEAD).get(0).getNote());
+	}
 }

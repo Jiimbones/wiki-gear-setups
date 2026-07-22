@@ -520,4 +520,81 @@ public class OwnershipResolverTest
 		assertTrue(OwnershipResolver.isSlayerTaskConditional(
 			new RankedItem("Slayer helmet (i)", 1, "If on a slayer task")));
 	}
+
+	/**
+	 * Pages write the task condition as a bare "(on task)" as often as they
+	 * write a full "Only while on a Slayer task" footnote. Requiring the word
+	 * "slayer" missed the short form on Graardor, KQ, Cerberus and Zulrah.
+	 */
+	@Test
+	public void bareOnTaskParentheticalGatesLikeAFootnote()
+	{
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Slayer helmet (i)", 1, "on task")));
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Slayer helmet (i)", 1, "if on task")));
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Slayer helmet (i)", 1, "task only")));
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Slayer helmet (i)", 1, "Only while on a Slayer task.")));
+	}
+
+	@Test
+	public void unrelatedNotesAreNotTaskConditions()
+	{
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Serpentine helm", 1, "Better than the Neitiznot faceguard")));
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Crystal helm", 1, "With full crystal and a bow of Faerdhinen.")));
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(
+			new RankedItem("Torva full helm", 1, null)));
+	}
+
+	@Test
+	public void bareOnTaskMakesTheCheckboxAppear()
+	{
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Slayer helmet (i)", 1, "on task"),
+			new RankedItem("Neitiznot faceguard", 2, null));
+		assertTrue(OwnershipResolver.hasSlayerConditional(s));
+	}
+
+	/**
+	 * Fortis Colosseum lists a melee weapon, a bow of faerdhinen and a staff
+	 * in one slot as a switch loadout. Only one can win the slot, but the
+	 * crystal armour is still correct — the bow is carried.
+	 */
+	@Test
+	public void crystalArmourSurvivesWhenTheBowIsASwitchThatLostTheSlot()
+	{
+		int fang = 26219;
+		OwnershipResolver r = new OwnershipResolver(new ItemResolver(FakeItemNameIndex.of(
+			CRYSTAL_BODY, "Crystal body", BOWFA, "Bow of faerdhinen", fang, "Osmumten's fang")));
+
+		Map<EquipSlot, List<RankedItem>> slots = new EnumMap<>(EquipSlot.class);
+		slots.put(EquipSlot.WEAPON, Arrays.asList(
+			new RankedItem("Osmumten's fang", 1, null),
+			new RankedItem("Bow of faerdhinen", 1, null)));
+		slots.put(EquipSlot.BODY, Collections.singletonList(new RankedItem("Crystal body", 1, null)));
+
+		SetupResolution res = r.resolve(new GearSetup("Budget", slots),
+			owned(CRYSTAL_BODY, BOWFA, fang), MissingGearBehavior.OMIT, false);
+
+		boolean crystalKept = false;
+		for (SlotPick pick : res.getPicks())
+		{
+			crystalKept |= pick.getItemId() == CRYSTAL_BODY;
+		}
+		assertTrue("crystal body should survive a carried bow of faerdhinen", crystalKept);
+	}
+
+	/** Armour is not swapped mid-fight, so those groups stay strict. */
+	@Test
+	public void armourSetGateIsStillStrict()
+	{
+		GearSetup s = setup(EquipSlot.BODY, new RankedItem("Crystal body", 1, null));
+		assertTrue("no bow owned: crystal must go",
+			setResolver().resolve(s, owned(CRYSTAL_BODY), MissingGearBehavior.OMIT, false)
+				.getPicks().isEmpty());
+	}
 }
