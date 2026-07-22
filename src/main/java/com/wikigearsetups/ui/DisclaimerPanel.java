@@ -37,6 +37,13 @@ class DisclaimerPanel extends JPanel
 	private static final Color HEADING = ColorScheme.BRAND_ORANGE;
 	/** RuneLite reserves 17px for the sidebar scrollbar; leave clearance for it. */
 	private static final int SIDE_PADDING = 24;
+	/**
+	 * Hard ceiling on the text column. The container reports 226px while the
+	 * visible column is plainly narrower — the panel is laid out wider than
+	 * the sidebar actually shows — so the measured width is treated as an
+	 * upper bound to shrink from, never as the truth.
+	 */
+	private static final int MAX_TEXT_WIDTH = 168;
 
 	private final List<Paragraph> paragraphs = new ArrayList<>();
 	private final JPanel content;
@@ -161,7 +168,7 @@ class DisclaimerPanel extends JPanel
 	 */
 	private void reflow()
 	{
-		int width = content.getWidth() - SIDE_PADDING;
+		int width = Math.min(content.getWidth() - SIDE_PADDING, MAX_TEXT_WIDTH);
 		if (width <= 0 || width == renderedWidth)
 		{
 			return;
