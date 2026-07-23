@@ -12,8 +12,8 @@ public interface WikiGearSetupsConfig extends Config
 
 	enum MissingGearBehavior
 	{
-		OMIT("Best owned only"),
-		SHOW_BEST_UNOWNED("Show best unowned as goal");
+		OMIT("Hide — only gear I own"),
+		SHOW_BEST_UNOWNED("Show as a goal");
 
 		private final String label;
 
@@ -31,8 +31,10 @@ public interface WikiGearSetupsConfig extends Config
 
 	@ConfigItem(
 		keyName = "missingGearBehavior",
-		name = "Missing gear",
-		description = "When you own no item for a slot: show the wiki's best recommendation as a goal placeholder, or omit the slot",
+		name = "Unowned recommendations",
+		description = "For a slot where you own none of the recommended items: "
+			+ "'Show as a goal' fills it with the wiki's best pick, highlighted as unowned, "
+			+ "so you can see what to aim for; 'Hide' leaves it empty so the tab holds only gear you own.",
 		position = 0
 	)
 	default MissingGearBehavior missingGearBehavior()
