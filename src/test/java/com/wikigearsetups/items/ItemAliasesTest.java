@@ -130,4 +130,51 @@ public class ItemAliasesTest
 		ItemResolver resolver = new ItemResolver(index);
 		assertEquals(13124, resolver.resolve("Ardougne cloak 4").get().getPrimaryId());
 	}
+
+	/**
+	 * Ornament kits and Echo recolours are cosmetic — owning the decorated
+	 * version satisfies a recommendation for the base item.
+	 */
+	@Test
+	public void echoRecolourSatisfiesTheBaseItem()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(
+			26241, "Virtus mask", 28001, "Echo virtus mask");
+		ItemResolver resolver = new ItemResolver(index);
+		assertTrue("owned Echo virtus mask should satisfy a Virtus mask rec",
+			resolver.resolve("Virtus mask").get().getAcceptableIds().contains(28001));
+	}
+
+	@Test
+	public void ornamentKitSuffixSatisfiesTheBaseItem()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(
+			6585, "Amulet of fury", 12436, "Amulet of fury (or)");
+		ItemResolver resolver = new ItemResolver(index);
+		assertTrue(resolver.resolve("Amulet of fury").get().getAcceptableIds().contains(12436));
+	}
+
+	/** Dyes are listed explicitly because their prefixes are ordinary words. */
+	@Test
+	public void dyedVariantsSatisfyTheBaseItem()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(
+			26233, "Ancient sceptre", 28262, "Shadow ancient sceptre",
+			26382, "Torva full helm", 27622, "Sanguine torva full helm",
+			22486, "Scythe of vitur", 28338, "Holy scythe of vitur");
+		ItemResolver resolver = new ItemResolver(index);
+
+		assertTrue(resolver.resolve("Ancient sceptre").get().getAcceptableIds().contains(28262));
+		assertTrue(resolver.resolve("Torva full helm").get().getAcceptableIds().contains(27622));
+		assertTrue(resolver.resolve("Scythe of vitur").get().getAcceptableIds().contains(28338));
+	}
+
+	/** The base item still resolves as itself — no regression from the extra lookups. */
+	@Test
+	public void baseItemsAreUnaffectedWhenNoOrnamentExists()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(26241, "Virtus mask");
+		ItemResolver resolver = new ItemResolver(index);
+		assertEquals(26241, resolver.resolve("Virtus mask").get().getPrimaryId());
+	}
 }

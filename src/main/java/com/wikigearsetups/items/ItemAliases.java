@@ -40,6 +40,18 @@ public final class ItemAliases
 			"Imbued saradomin max cape", "Imbued guthix max cape", "Imbued zamorak max cape");
 		equivalent("Saradomin cape", "Guthix cape", "Zamorak cape");
 
+		// dye recolours: same item and tier, but the dye names are ordinary
+		// words ("Blood", "Ice", "Holy") that can't be stripped generically
+		// without colliding with real item families (Blood moon, Ice barrage),
+		// so the handful that exist are listed. Ornament kits "(or)" and Echo
+		// recolours are handled generically in ItemResolver instead.
+		equivalent("Ancient sceptre", "Blood ancient sceptre", "Ice ancient sceptre",
+			"Shadow ancient sceptre", "Smoke ancient sceptre");
+		equivalent("Scythe of vitur", "Holy scythe of vitur", "Sanguine scythe of vitur");
+		equivalent("Torva full helm", "Sanguine torva full helm");
+		equivalent("Torva platebody", "Sanguine torva platebody");
+		equivalent("Torva platelegs", "Sanguine torva platelegs");
+
 		generic("God cape", "Saradomin cape", "Guthix cape", "Zamorak cape");
 		generic("Imbued god cape",
 			"Imbued saradomin cape", "Imbued guthix cape", "Imbued zamorak cape",

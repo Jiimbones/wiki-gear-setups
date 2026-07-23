@@ -167,6 +167,15 @@ public class ItemResolver
 		// trouver-locked "(l)" variants aren't always in the variation group
 		acceptable.addAll(index.idsByName(ItemNames.normalize(wiki + " (l)")));
 
+		// cosmetic ornament and recolour variants are the same item at the same
+		// tier — an ornament kit ("Amulet of fury (or)") and an Echo recolour
+		// ("Echo virtus mask"). ItemVariationMapping doesn't always group them,
+		// so accept them by name. Both markers are unambiguous, so this never
+		// crosses into a different item. (Overloaded dye prefixes like "Blood"
+		// or "Ice" are handled per-item in ItemAliases instead.)
+		acceptable.addAll(index.idsByName(ItemNames.normalize(wiki + " (or)")));
+		acceptable.addAll(index.idsByName(ItemNames.normalize("Echo " + wiki)));
+
 		// distinct upgrade items in other variation groups (Divine rune pouch
 		// for "Rune pouch") also satisfy the recommendation
 		for (String upgrade : ItemAliases.upgradesFor(wiki))
