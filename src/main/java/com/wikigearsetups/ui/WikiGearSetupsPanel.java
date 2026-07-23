@@ -99,7 +99,6 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final Color OWNED = ColorScheme.PROGRESS_COMPLETE_COLOR;
 	private static final Color SUBSTITUTE = ColorScheme.PROGRESS_INPROGRESS_COLOR;
 	private static final Color MISSING = ColorScheme.PROGRESS_ERROR_COLOR;
-	private static final String ALL_STYLES = "All styles (one tab)";
 	private static final String NO_INVENTORY = "No inventory";
 	private static final int GRID_COLS = 8;
 	private static final int CELL_W = 26;
@@ -874,7 +873,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 		if (pageSetups.size() > 1)
 		{
-			setupModel.addElement(ALL_STYLES);
+			// name the real cost — combining N styles stacks N gear blocks
+			setupModel.addElement("All " + pageSetups.size() + " styles · ~"
+				+ LayoutBuilder.estimatedRows(pageSetups.size()) + " rows");
 		}
 		setupCombo.setModel(setupModel);
 		setupCombo.setVisible(true);

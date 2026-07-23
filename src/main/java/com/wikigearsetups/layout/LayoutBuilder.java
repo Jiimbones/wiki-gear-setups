@@ -36,6 +36,16 @@ public final class LayoutBuilder
 	private static final int ROWS_PER_BLOCK = 5;
 	private static final int INVENTORY_COL = 4;
 
+	/**
+	 * Rough height of an all-styles layout in the equipment-screen style: one
+	 * five-row block per gear setup. Used to warn before importing a tall tab;
+	 * inventory and extras can add a few more rows, hence "about".
+	 */
+	public static int estimatedRows(int gearBlockCount)
+	{
+		return gearBlockCount * ROWS_PER_BLOCK;
+	}
+
 	private static final Map<EquipSlot, Integer> EQUIPMENT_SCREEN_POS = new EnumMap<>(EquipSlot.class);
 
 	static
