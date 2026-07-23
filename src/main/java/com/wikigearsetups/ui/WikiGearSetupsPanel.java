@@ -21,6 +21,7 @@ import com.wikigearsetups.wiki.ExampleSetup;
 import com.wikigearsetups.wiki.ExampleSetupParser;
 import com.wikigearsetups.wiki.GearSetup;
 import com.wikigearsetups.wiki.GearSetupParser;
+import com.wikigearsetups.wiki.GearSetups;
 import com.wikigearsetups.wiki.InventoryParser;
 import com.wikigearsetups.wiki.InventorySetup;
 import com.wikigearsetups.wiki.PageDiscovery;
@@ -147,6 +148,9 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private String currentPageTitle;
 	// everything the loaded page offers; the source selector picks which view
 	private List<GearSetup> pageSetups = Collections.emptyList();
+	// single-item annotation setups filtered out of the dropdown; their owned
+	// items land below the layout as extras
+	private List<GearSetup> pageSwitches = Collections.emptyList();
 	private List<InventorySetup> pageInventories = Collections.emptyList();
 	private List<ExampleSetup> pageExamples = Collections.emptyList();
 	// boss uniques/pet offered as tab icons; empty until the drop table is seen
@@ -792,10 +796,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 		List<ExampleSetup> examples, int[] pairing)
 	{
 		currentPageTitle = pageTitle;
-		pageSetups = disambiguate(setups);
+		// single-item "for this room" annotations aren't loadouts; keep them out
+		// of the dropdown and let their owned items fall below the layout as
+		// extras (see decision #12 — they ride the owned-only channel, so BIS
+		// never shows them). Score and pair on the FULL list first, then remap.
+		GearSetups.Partition split = GearSetups.partition(setups);
+		pageSetups = disambiguate(split.getLoadouts());
+		pageSwitches = split.getSwitches();
+		inventoryPairing = split.remapPairing(pairing);
 		pageInventories = inventories;
 		pageExamples = examples;
-		inventoryPairing = pairing;
 		pageDropNames = Collections.emptyList();
 		userPickedInventory = false;
 		userEditedTag = false;
@@ -1174,13 +1184,23 @@ public class WikiGearSetupsPanel extends PluginPanel
 				excluded.add(pick.getItemId());
 			}
 			// owned alternates are an owned-mode concept — the BIS view shows
-			// the wiki's list and nothing else
+			// the wiki's list and nothing else (decision #12). The page's
+			// single-item switch annotations ride the same owned-only channel,
+			// so they too are absent from BIS.
 			List<Integer> extras = new ArrayList<>();
 			if (strategy == PickStrategy.BEST_OWNED)
 			{
 				for (GearSetup setup : selectedSetups)
 				{
 					for (int id : ownershipResolver.ownedAlternatives(setup, owned, onSlayerTask, excluded))
+					{
+						extras.add(id);
+						excluded.add(id);
+					}
+				}
+				for (GearSetup switchSetup : pageSwitches)
+				{
+					for (int id : ownershipResolver.ownedAlternatives(switchSetup, owned, onSlayerTask, excluded))
 					{
 						extras.add(id);
 						excluded.add(id);
@@ -1339,7 +1359,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		if (!extras.isEmpty())
 		{
-			addRow("+" + extras.size() + " owned alternates below the layout", ColorScheme.LIGHT_GRAY_COLOR, true);
+			addRow("+" + extras.size() + " owned extras below the layout (alternates, switches)",
+				ColorScheme.LIGHT_GRAY_COLOR, true);
 		}
 
 		boolean importable = totalPicks > 0
@@ -1661,6 +1682,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		currentPageTitle = null;
 		currentSetups = null;
 		pageSetups = Collections.emptyList();
+		pageSwitches = Collections.emptyList();
+		inventoryPairing = SetupPairing.NONE;
 		pageInventories = Collections.emptyList();
 		pageExamples = Collections.emptyList();
 		pageDropNames = Collections.emptyList();
