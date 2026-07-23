@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- 2026-07-23: Ornament-kit & recolour acceptance — an owned decorated item now satisfies the base rec (reported: Echo virtus mask not counting for "Virtus mask"). Generic by convention: resolver also looks up `<name> (or)` and `Echo <name>` (covers all ~69 ornament-kit items + Echo recolours, current and future); dyes with overloaded prefix words (Blood/Ice/Holy/Sanguine) listed explicitly in ItemAliases (ancient sceptre, scythe of vitur, torva). 71 corpus base items affected; verified against real item names; 245 tests green.
 - 2026-07-23: Plan W7 — checkbox is "On this task" with a per-page tooltip built from the wiki's own note wording (`OwnershipResolver.slayerConditionalNotes`); conditions are monster-specific so the flat label overstated them. Known gap: a bare "Only on <monster> task" without "slayer" still isn't gated; 241 tests green.
 - 2026-07-23: Plan W6 — search results tagged by kind (`PageKind`, title-only): "Abyssal demons · Slayer task", "… · Guide"; boss pages unchanged, CA tasks left unlabelled (no network on the search path); tag names untouched; 239 tests green.
 - 2026-07-23: Plan W5 — "All styles" option names its cost ("All 6 styles · ~30 rows", `LayoutBuilder.estimatedRows`); informational after W3 removed the 202-row case; dead `ALL_STYLES` constant dropped; 233 tests green.
