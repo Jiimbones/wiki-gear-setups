@@ -154,6 +154,26 @@ public class ItemAliasesTest
 		assertTrue(resolver.resolve("Amulet of fury").get().getAcceptableIds().contains(12436));
 	}
 
+	/** Gilded, trimmed, heraldic and Deadman are all cosmetic same-tier copies. */
+	@Test
+	public void gildedTrimmedHeraldicAndDeadmanSatisfyTheBase()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(
+			1163, "Rune full helm",
+			2619, "Rune full helm (g)",
+			2627, "Rune full helm (t)",
+			10306, "Rune full helm (h1)",
+			11838, "Bandos godsword",
+			30000, "Bandos godsword (deadman)");
+		ItemResolver resolver = new ItemResolver(index);
+
+		java.util.Set<Integer> helm = resolver.resolve("Rune full helm").get().getAcceptableIds();
+		assertTrue("gilded", helm.contains(2619));
+		assertTrue("trimmed", helm.contains(2627));
+		assertTrue("heraldic", helm.contains(10306));
+		assertTrue("deadman", resolver.resolve("Bandos godsword").get().getAcceptableIds().contains(30000));
+	}
+
 	/** Dyes are listed explicitly because their prefixes are ordinary words. */
 	@Test
 	public void dyedVariantsSatisfyTheBaseItem()

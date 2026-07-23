@@ -39,6 +39,20 @@ public class ItemResolver
 	private static final Pattern TRAILING_NUMBER = Pattern.compile("\\s+\\d+$");
 
 	/**
+	 * Purely cosmetic decorations that share a base item's stats and tier. Each
+	 * suffix/prefix is unambiguous — it can only denote the decoration, never a
+	 * different item — so owning the decorated copy satisfies the base rec:
+	 * ornament kit "(or)", gilded "(g)", trimmed "(t)", heraldic "(h1)"-"(h5)",
+	 * Deadman "(deadman)", and the Echo recolours ("Echo virtus mask").
+	 */
+	private static final String[] COSMETIC_SUFFIXES = {
+		" (or)", " (g)", " (t)", " (h1)", " (h2)", " (h3)", " (h4)", " (h5)", " (deadman)",
+	};
+	private static final String[] COSMETIC_PREFIXES = {
+		"Echo ",
+	};
+
+	/**
 	 * Empty when the name is unknown — callers should check
 	 * {@code index.isReady()} to distinguish "unknown" from "index not built yet".
 	 *
@@ -167,14 +181,20 @@ public class ItemResolver
 		// trouver-locked "(l)" variants aren't always in the variation group
 		acceptable.addAll(index.idsByName(ItemNames.normalize(wiki + " (l)")));
 
-		// cosmetic ornament and recolour variants are the same item at the same
-		// tier — an ornament kit ("Amulet of fury (or)") and an Echo recolour
-		// ("Echo virtus mask"). ItemVariationMapping doesn't always group them,
-		// so accept them by name. Both markers are unambiguous, so this never
-		// crosses into a different item. (Overloaded dye prefixes like "Blood"
-		// or "Ice" are handled per-item in ItemAliases instead.)
-		acceptable.addAll(index.idsByName(ItemNames.normalize(wiki + " (or)")));
-		acceptable.addAll(index.idsByName(ItemNames.normalize("Echo " + wiki)));
+		// cosmetic variants are the same item at the same tier, so an owned
+		// decorated copy satisfies a recommendation for the base. They aren't
+		// reliably grouped by ItemVariationMapping, so accept them by name.
+		// Every marker here is unambiguous — it can only mean the decoration —
+		// so none can cross into a different item. Overloaded dye prefixes
+		// ("Blood", "Ice") are handled per-item in ItemAliases instead.
+		for (String suffix : COSMETIC_SUFFIXES)
+		{
+			acceptable.addAll(index.idsByName(ItemNames.normalize(wiki + suffix)));
+		}
+		for (String prefix : COSMETIC_PREFIXES)
+		{
+			acceptable.addAll(index.idsByName(ItemNames.normalize(prefix + wiki)));
+		}
 
 		// distinct upgrade items in other variation groups (Divine rune pouch
 		// for "Rune pouch") also satisfy the recommendation
