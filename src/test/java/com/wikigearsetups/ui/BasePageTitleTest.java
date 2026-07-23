@@ -26,4 +26,14 @@ public class BasePageTitleTest
 	{
 		assertEquals("Amoxliatl", WikiGearSetupsPanel.basePageTitle("Amoxliatl"));
 	}
+
+	@Test
+	public void searchResultLabelsCarryTheKind()
+	{
+		assertEquals("Abyssal demons  ·  Slayer task",
+			WikiGearSetupsPanel.resultLabel("Slayer task/Abyssal demons"));
+		assertEquals("Ultimate Ironman Guide/Equipment  ·  Guide",
+			WikiGearSetupsPanel.resultLabel("Ultimate Ironman Guide/Equipment"));
+		assertEquals("Zulrah", WikiGearSetupsPanel.resultLabel("Zulrah/Strategies"));
+	}
 }

@@ -25,6 +25,7 @@ import com.wikigearsetups.wiki.GearSetups;
 import com.wikigearsetups.wiki.InventoryParser;
 import com.wikigearsetups.wiki.InventorySetup;
 import com.wikigearsetups.wiki.PageDiscovery;
+import com.wikigearsetups.wiki.PageKind;
 import com.wikigearsetups.wiki.SearchResult;
 import com.wikigearsetups.wiki.SetupPairing;
 import com.wikigearsetups.wiki.SourceScorer;
@@ -629,11 +630,27 @@ public class WikiGearSetupsPanel extends PluginPanel
 				resultsModel.clear();
 				for (SearchResult r : results)
 				{
-					resultsModel.addElement(displayTitle(r.getTitle()));
+					resultsModel.addElement(resultLabel(r.getTitle()));
 				}
 				clearSetups();
 				status(results.isEmpty() ? "No pages with gear setups found" : results.size() + " results", null);
 			}));
+	}
+
+	/**
+	 * A search result's line: the base page name, its kind when it has a
+	 * telling one, and — for a slayer task — just the monster ("Slayer
+	 * task/Abyssal demons" reads as "Abyssal demons · Slayer task").
+	 */
+	static String resultLabel(String title)
+	{
+		PageKind kind = PageKind.of(title);
+		String base = displayTitle(title);
+		if (kind == PageKind.SLAYER_TASK && base.startsWith("Slayer task/"))
+		{
+			base = base.substring("Slayer task/".length());
+		}
+		return kind.getLabel() == null ? base : base + "  ·  " + kind.getLabel();
 	}
 
 	/** "Zulrah/Strategies" and "Guide:Theatre of Blood setups" read as the base name. */
