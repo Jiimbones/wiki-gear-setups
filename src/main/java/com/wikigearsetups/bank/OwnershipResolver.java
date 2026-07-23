@@ -1,6 +1,7 @@
 package com.wikigearsetups.bank;
 
 import com.wikigearsetups.WikiGearSetupsConfig.MissingGearBehavior;
+import com.wikigearsetups.items.ItemNames;
 import com.wikigearsetups.items.ItemResolver;
 import com.wikigearsetups.items.ItemSets;
 import com.wikigearsetups.items.ResolvedItem;
@@ -436,6 +437,15 @@ public class OwnershipResolver
 		"on task", "on a task", "task only", "only on task", "while on task",
 	};
 
+	/**
+	 * The slayer-effect items a note might name. When a note names one of
+	 * these but the item it's attached to isn't it, the task condition belongs
+	 * to that other item, not this one.
+	 */
+	private static final String[] TASK_ITEMS = {
+		"slayer helmet", "slayer helm", "black mask", "salve amulet",
+	};
+
 	static boolean isSlayerTaskConditional(RankedItem item)
 	{
 		String note = item.getNote();
@@ -444,17 +454,57 @@ public class OwnershipResolver
 			return false;
 		}
 		String n = note.toLowerCase(java.util.Locale.ROOT);
-		if (n.contains("slayer") && n.contains("task"))
-		{
-			return true;
-		}
 		if (!n.contains("task"))
 		{
 			return false;
 		}
+
+		// The note describes the OFF-task case — gating it would hide the item
+		// exactly when it's wanted (Dual macuahuitl on Custodian stalker).
+		if (n.contains("off-task") || n.contains("off task"))
+		{
+			return false;
+		}
+		// The condition names a DIFFERENT task item than this one, so it
+		// belongs to that item ("Downgrade to glory if bringing a Slayer
+		// helmet on task" attached to the Amulet of rancour).
+		String self = ItemNames.normalize(item.getName());
+		for (String taskItem : TASK_ITEMS)
+		{
+			if (n.contains(taskItem) && !self.contains(taskItem))
+			{
+				return false;
+			}
+		}
+		// A task phrase with an escape hatch is a preference, not a gate
+		// ("If on task, or have 8 ranged strength…" on the Toxic blowpipe).
+		if (followedByOr(n))
+		{
+			return false;
+		}
+
+		if (n.contains("slayer"))
+		{
+			return true;
+		}
 		for (String phrase : TASK_ONLY_PHRASES)
 		{
 			if (n.contains(phrase))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** True when a task phrase is followed shortly by " or " — an alternative. */
+	private static boolean followedByOr(String note)
+	{
+		for (String phrase : TASK_ONLY_PHRASES)
+		{
+			int at = note.indexOf(phrase);
+			if (at >= 0 && note.indexOf(" or ", at) >= 0
+				&& note.indexOf(" or ", at) - at < 40)
 			{
 				return true;
 			}

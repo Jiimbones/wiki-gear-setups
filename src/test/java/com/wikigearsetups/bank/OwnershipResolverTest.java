@@ -550,6 +550,48 @@ public class OwnershipResolverTest
 			new RankedItem("Torva full helm", 1, null)));
 	}
 
+	/**
+	 * The four false positives from the full-corpus audit. Broadening the
+	 * match to catch "(on task)" also caught notes that merely mention a task
+	 * — and silently hiding a correct item is worse than the bug it replaced.
+	 */
+	@Test
+	public void offTaskNoteIsNeverAGate()
+	{
+		// Dual macuahuitl on the Custodian stalker page — explicitly off-task
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(new RankedItem("Dual macuahuitl", 1,
+			"With set effect, off-task. On a slayer task, using a Slayer helm and a slash weapon")));
+	}
+
+	@Test
+	public void noteNamingADifferentTaskItemDoesNotGateThisItem()
+	{
+		// Amulet of rancour on KBD — the condition is about the helmet
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(new RankedItem("Amulet of rancour", 1,
+			"Downgrade to an amulet of glory if bringing a Slayer helmet (i) on task.")));
+		// Salve amulet (e) on Vorkath — the note is about the slayer helm's DPS
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(new RankedItem("Salve amulet (e)", 1,
+			"DPS is slightly higher in max melee gear with slayer helm (i) and amulet")));
+	}
+
+	/** But a slayer item whose own note names it still gates. */
+	@Test
+	public void slayerHelmetWithSelfNamingNoteStillGates()
+	{
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(new RankedItem("Slayer helmet (i)", 1,
+			"Only on a Slayer task.")));
+		assertTrue(OwnershipResolver.isSlayerTaskConditional(new RankedItem("Black mask (i)", 1,
+			"On task only")));
+	}
+
+	@Test
+	public void taskConditionWithAnOrEscapeHatchIsNotAGate()
+	{
+		// Toxic blowpipe on Royal Titans — a condition with an alternative
+		assertFalse(OwnershipResolver.isSlayerTaskConditional(new RankedItem("Toxic blowpipe", 1,
+			"If on task, or have 8 ranged strength aside from BP & darts, even Amethyst darts")));
+	}
+
 	@Test
 	public void bareOnTaskMakesTheCheckboxAppear()
 	{
