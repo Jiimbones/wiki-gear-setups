@@ -178,5 +178,21 @@ Method: 39 untested `/Strategies` pages fetched through the plugin's own PageDis
 - Inventory substitution can swap a crossbow for a bow (Muspah: unowned Zaryte crossbow → Twisted bow) when the wiki lists them in one ladder. Bolt-proc content makes the bow unsuitable, but the wiki's own ladder says otherwise and a name-based crossbow/bow filter would be crude — left alone deliberately
 - A `+` switch loadout collapses into one slot's alternatives, so only one of "fang + bowfa + sang" is worn and the rest surface as owned alternates below the layout. Closest fit to a one-item-per-slot model
 
+## Audit + heavy-page plan implemented (2026-07-23)
+Sequenced per the dev plan; conflicts were measured before coding, not assumed. See decisions #12 (BIS fidelity).
+- [x] **W1** off-task guards on slayer gating (3 guards; 4 corpus false positives removed; also makes BIS more wiki-faithful); 215 tests
+- [x] **W2** resolution residue: `;n` marker, `Placeholder` blank, trailing-number + open-state candidates, `God blessing` alias (corpus unresolvable 14→3, rest are index gaps); 220 tests
+- [x] **W3** thin annotation setups → extras (`GearSetups.partition`, ≥3-slot threshold in the empty band; CoX 15→3 etc.); scored/paired on the unfiltered list then remapped (conflicts 1 & 2); UIM-style all-thin pages left whole; 227 tests
+- [x] **W4** pane-label fallback for weak `|style=` (`SectionLabels` shared, `GearSetup.paneLabel`); **changes tag names on 13 pages — pre-release only**; 233 tests
+- [x] **W5** row-count on "All styles" (`LayoutBuilder.estimatedRows`); 233 tests
+- [x] **W6** page-kind tag on search results (`PageKind`, title-only); 239 tests
+- [x] **W7** wiki task wording in checkbox tooltip, label → "On this task"; 241 tests
+- [ ] User visual verification in dev client (W3 changes what's tagged — check extras volume/layout height; W4 label changes; W6 result tags)
+
+### Deferred (from the heavy-page study, not scheduled)
+- [ ] F3 pane-scoped pairing (+13 pages) / F7 content-derived inventory labels — overlap; decide together after W3 settles how much the dropdowns still hurt
+- [ ] Section-grouped inventory dropdown (Yama's 13) — the only real answer to inventory proliferation
+- [ ] Gating gap: bare "Only on <monster> task" (no "slayer") — needs its own false-positive pass like W1
+
 ## Next
 - [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)
