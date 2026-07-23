@@ -391,6 +391,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		CheckBoxIcon.apply(recommendedToggle);
 		recommendedToggle.setToolTipText("Show the wiki's own first choice for every slot, "
 			+ "marking what you own. Also changes what Import writes.");
+		// installation default is adaptive (off); the config can flip that
+		recommendedToggle.setSelected(config.defaultToWikiBis());
 		recommendedToggle.addActionListener(e ->
 		{
 			userEditedTag = false;
@@ -1249,7 +1251,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 			// single-item switch annotations ride the same owned-only channel,
 			// so they too are absent from BIS.
 			List<Integer> extras = new ArrayList<>();
-			if (strategy == PickStrategy.BEST_OWNED)
+			if (strategy == PickStrategy.BEST_OWNED && config.includeExtras())
 			{
 				for (GearSetup setup : selectedSetups)
 				{
@@ -1606,7 +1608,16 @@ public class WikiGearSetupsPanel extends PluginPanel
 		{
 			styleLabel = styleLabel + " bis";
 		}
-		return TagNames.build(displayTitle(currentPageTitle), styleLabel);
+		return withTagPrefix(TagNames.build(displayTitle(currentPageTitle), styleLabel));
+	}
+
+	/**
+	 * Prepends the configured prefix so every tab this plugin creates sorts
+	 * together and stays clear of the player's own tabs.
+	 */
+	private String withTagPrefix(String tag)
+	{
+		return TagNames.withPrefix(config.tagPrefix(), tag);
 	}
 
 	/**
@@ -1673,7 +1684,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 			BankTagImporter.Existing found = existing;
 			SwingUtilities.invokeLater(() ->
 			{
-				if (found != BankTagImporter.Existing.NONE && !confirmOverwrite(tag, found))
+				if (found != BankTagImporter.Existing.NONE && config.confirmOverwrite()
+					&& !askOverwrite(tag, found))
 				{
 					status("Import cancelled — '" + tag + "' left alone", null);
 					importButton.setEnabled(true);
@@ -1690,7 +1702,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	 * they built by hand is not recoverable, so the wording leads with whose
 	 * it is and the safe option is the default.
 	 */
-	private boolean confirmOverwrite(String tag, BankTagImporter.Existing existing)
+	private boolean askOverwrite(String tag, BankTagImporter.Existing existing)
 	{
 		boolean ours = existing == BankTagImporter.Existing.OURS;
 		String message = "<html><body style='width:260px'>"

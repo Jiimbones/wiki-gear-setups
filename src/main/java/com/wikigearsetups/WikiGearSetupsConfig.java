@@ -53,4 +53,52 @@ public interface WikiGearSetupsConfig extends Config
 		return LayoutStyle.EQUIPMENT_SCREEN;
 	}
 
+	@ConfigItem(
+		keyName = "defaultToWikiBis",
+		name = "Start in Wiki BIS view",
+		description = "Open each page with 'Show wiki BIS' already ticked, so setups show the wiki's ideal "
+			+ "gear instead of adapting to your bank. Off shows the setup built from what you own.",
+		position = 2
+	)
+	default boolean defaultToWikiBis()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "confirmOverwrite",
+		name = "Confirm before overwriting",
+		description = "Ask before an import replaces an existing bank tag. Turn off to import without the "
+			+ "prompt — a tab you arranged by hand can't be recovered, so leave this on unless you re-import a lot.",
+		position = 3
+	)
+	default boolean confirmOverwrite()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "includeExtras",
+		name = "Extra owned gear",
+		description = "Place owned alternatives and situational switches the wiki mentions below the main "
+			+ "layout. Turn off for a tab of just the chosen loadout.",
+		position = 4
+	)
+	default boolean includeExtras()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "tagPrefix",
+		name = "Tag name prefix",
+		description = "Prepended to every tab this plugin creates (e.g. 'wgs') so they sort together in Bank "
+			+ "Tags and never collide with your own tabs. Leave blank for no prefix.",
+		position = 5
+	)
+	default String tagPrefix()
+	{
+		return "";
+	}
+
 }

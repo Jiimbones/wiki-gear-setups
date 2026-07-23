@@ -45,4 +45,20 @@ public class TagNamesTest
 			TagNames.build("Chambers of Xeric/Strategies", "Magic"),
 			TagNames.build("Chambers of Xeric/Strategies", "Magic"));
 	}
+
+	@Test
+	public void prefixIsPrependedAsASlug()
+	{
+		assertEquals("wgs-zulrah-magic", TagNames.withPrefix("wgs", "zulrah-magic"));
+		assertEquals("wgs-zulrah-magic", TagNames.withPrefix("WGS!", "zulrah-magic"));
+	}
+
+	/** No prefix configured is the installation default — a pure no-op. */
+	@Test
+	public void emptyPrefixLeavesTheTagUnchanged()
+	{
+		assertEquals("zulrah-magic", TagNames.withPrefix("", "zulrah-magic"));
+		assertEquals("zulrah-magic", TagNames.withPrefix(null, "zulrah-magic"));
+		assertEquals("", TagNames.withPrefix("wgs", ""));
+	}
 }
