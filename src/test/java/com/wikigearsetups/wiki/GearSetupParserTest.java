@@ -150,6 +150,29 @@ public class GearSetupParserTest
 		assertEquals("Magic (Diary kill)", setups.get(3).getStyleLabel());
 	}
 
+	/** Each setup keeps the tabber pane it sat under, for when style is weak. */
+	@Test
+	public void gemstoneCrabSetupsCarryTheirPaneLabels() throws IOException
+	{
+		List<GearSetup> setups = parser.parse(fixture("gemstone-crab-strategies"));
+		// four melee setups all styled "Melee"/"Melee (Low level)" but panes differ
+		List<String> panes = new java.util.ArrayList<>();
+		for (GearSetup s : setups)
+		{
+			panes.add(s.getPaneLabel());
+		}
+		assertTrue("expected distinct pane labels, got " + panes,
+			panes.contains("Dharok's") && panes.contains("Obsidian") && panes.contains("Blood moon"));
+	}
+
+	@Test
+	public void paneLabelIsNullWithoutATabber()
+	{
+		List<GearSetup> setups = parser.parse(
+			"{{Recommended equipment|style=Melee|head1={{plink|Torva full helm}}}}");
+		assertNull(setups.get(0).getPaneLabel());
+	}
+
 	@Test
 	public void zulrahMagicSlotContents() throws IOException
 	{

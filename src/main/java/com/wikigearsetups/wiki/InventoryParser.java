@@ -1,16 +1,8 @@
 package com.wikigearsetups.wiki;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.wikigearsetups.wiki.GearSetupParser.findTemplateEnd;
@@ -40,25 +32,6 @@ public class InventoryParser
 	 * name contains it, so splitting back out is unambiguous.
 	 */
 	public static final String CHOICE_SEPARATOR = " / ";
-
-	/**
-	 * Tabber pane openers: "<tabber>Label=", "|-|Label=", or the label on a
-	 * later line — blank lines between the separator and the label are common
-	 * and must not break the match.
-	 */
-	private static final Pattern PANE_LABEL =
-		Pattern.compile("(?m)^(?:<tabber>|\\|-\\|)[ \\t]*(?:\\n[ \\t]*)*([^=\\n|{}]+?)[ \\t]*=");
-	private static final Pattern HEADING = Pattern.compile("(?m)^={2,5}\\s*(.+?)\\s*={2,5}\\s*$");
-
-	/**
-	 * Headings that describe what the template <em>is</em> rather than which
-	 * setup it belongs to. Pages routinely put "==Inventory==" immediately
-	 * above every {{Inventory}}, which would otherwise give every inventory
-	 * on the page the same label and make the dropdown unusable.
-	 */
-	private static final Set<String> GENERIC_LABELS = new HashSet<>(Arrays.asList(
-		"inventory", "inventories", "equipment", "gear", "setup", "setups",
-		"loadout", "loadouts", "items", "recommended equipment"));
 
 	private static final class Pending
 	{
@@ -280,47 +253,10 @@ public class InventoryParser
 		return cut == value.length() ? value : value.substring(0, cut).trim();
 	}
 
-	/**
-	 * The nearest preceding tabber pane label or heading that actually says
-	 * which setup this is, else "Inventory N".
-	 *
-	 * "Nearest" alone is not enough: a page that writes "==Inventory==" above
-	 * every template would label all of them "Inventory". Generic headings
-	 * are therefore stepped over in favour of the enclosing pane label
-	 * ("Melee", "Magic") further back, and only used if nothing better exists.
-	 */
+	/** The pane/heading that distinguishes this inventory, else "Inventory N". */
 	static String labelFor(String wikitext, int templateStart, int index)
 	{
-		String before = wikitext.substring(0, templateStart);
-		NavigableMap<Integer, String> candidates = new TreeMap<>();
-
-		Matcher pane = PANE_LABEL.matcher(before);
-		while (pane.find())
-		{
-			candidates.put(pane.start(), pane.group(1).trim());
-		}
-		Matcher heading = HEADING.matcher(before);
-		while (heading.find())
-		{
-			candidates.put(heading.start(), stripMarkup(heading.group(1)));
-		}
-
-		String nearest = null;
-		for (String label : candidates.descendingMap().values())
-		{
-			if (label.isEmpty())
-			{
-				continue;
-			}
-			if (nearest == null)
-			{
-				nearest = label;
-			}
-			if (!GENERIC_LABELS.contains(label.toLowerCase(Locale.ROOT)))
-			{
-				return label;
-			}
-		}
-		return nearest != null ? nearest : "Inventory " + index;
+		String label = SectionLabels.precedingLabel(wikitext, templateStart);
+		return label != null ? label : "Inventory " + index;
 	}
 }

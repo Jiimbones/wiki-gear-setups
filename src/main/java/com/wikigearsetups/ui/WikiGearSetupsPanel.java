@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.swing.BorderFactory;
@@ -1035,20 +1036,34 @@ public class WikiGearSetupsPanel extends PluginPanel
 		}
 	}
 
+	private static final Pattern AUTO_STYLE = Pattern.compile("Setup \\d+");
+
 	/**
-	 * Makes repeated {@code |style=} labels distinct.
+	 * Chooses a distinct, meaningful display label for every setup.
 	 *
-	 * Several pages give two setups the same style ("Melee" twice on Royal
-	 * Titans). Identical dropdown entries are unpickable, and worse, they slug
-	 * to the same tag — so importing the second would silently replace the
-	 * first tab.
+	 * The template's own {@code |style=} is used when it's present and unique.
+	 * When it's missing (the parser fell back to "Setup 1") or duplicated
+	 * ("Melee" four times on Gemstone Crab), the tabber pane the template sat
+	 * under is the better distinguisher ("Dharok's", "Obsidian", "Blood
+	 * moon") — so it's used instead when one exists. Whatever remains is then
+	 * numbered, so no two entries are ever identical: identical entries are
+	 * unpickable and slug to the same tag, silently overwriting each other.
 	 */
 	static List<GearSetup> disambiguate(List<GearSetup> setups)
 	{
+		Map<String, Integer> styleCount = new HashMap<>();
+		for (GearSetup setup : setups)
+		{
+			styleCount.merge(setup.getStyleLabel(), 1, Integer::sum);
+		}
+
 		List<String> labels = new ArrayList<>(setups.size());
 		for (GearSetup setup : setups)
 		{
-			labels.add(setup.getStyleLabel());
+			String style = setup.getStyleLabel();
+			boolean weak = styleCount.get(style) > 1 || AUTO_STYLE.matcher(style).matches();
+			String pane = setup.getPaneLabel();
+			labels.add(weak && pane != null && !pane.isEmpty() ? pane : style);
 		}
 		labels = uniquify(labels);
 
@@ -1058,7 +1073,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 			GearSetup setup = setups.get(i);
 			out.add(labels.get(i).equals(setup.getStyleLabel())
 				? setup
-				: new GearSetup(labels.get(i), setup.getSlots()));
+				: new GearSetup(labels.get(i), setup.getSlots(), setup.getPaneLabel()));
 		}
 		return out;
 	}

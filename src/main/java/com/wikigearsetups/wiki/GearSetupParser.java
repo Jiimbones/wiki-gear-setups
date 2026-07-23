@@ -53,7 +53,8 @@ public class GearSetupParser
 			String body = wikitext.substring(i + 2, end - 2);
 			if (templateName(body).equalsIgnoreCase(TEMPLATE_NAME))
 			{
-				GearSetup setup = parseSetup(body, setups.size() + 1);
+				GearSetup setup = parseSetup(body, setups.size() + 1,
+					SectionLabels.precedingLabel(wikitext, i));
 				if (setup != null)
 				{
 					setups.add(setup);
@@ -70,7 +71,7 @@ public class GearSetupParser
 		return setups;
 	}
 
-	private GearSetup parseSetup(String templateBody, int index)
+	private GearSetup parseSetup(String templateBody, int index, String paneLabel)
 	{
 		List<String> parts = splitTopLevel(templateBody, '|');
 		String style = null;
@@ -140,7 +141,7 @@ public class GearSetupParser
 		{
 			return null;
 		}
-		return new GearSetup(style != null ? style : "Setup " + index, slots);
+		return new GearSetup(style != null ? style : "Setup " + index, slots, paneLabel);
 	}
 
 	private List<RankedItem> parseItems(String value, int rank)
