@@ -601,6 +601,25 @@ public class OwnershipResolverTest
 		assertTrue(OwnershipResolver.hasSlayerConditional(s));
 	}
 
+	/** The tooltip surfaces the wiki's own wording, one line per task item. */
+	@Test
+	public void slayerConditionalNotesPairItemsWithTheirWording()
+	{
+		GearSetup s = setup(EquipSlot.HEAD,
+			new RankedItem("Slayer helmet (i)", 1, "When on a greater demon Slayer task."),
+			new RankedItem("Neitiznot faceguard", 2, null));
+
+		assertEquals(Collections.singletonList("Slayer helmet (i) — When on a greater demon Slayer task."),
+			OwnershipResolver.slayerConditionalNotes(s));
+	}
+
+	@Test
+	public void slayerConditionalNotesAreEmptyWhenNothingIsGated()
+	{
+		GearSetup s = setup(EquipSlot.HEAD, new RankedItem("Torva full helm", 1, null));
+		assertTrue(OwnershipResolver.slayerConditionalNotes(s).isEmpty());
+	}
+
 	/**
 	 * Fortis Colosseum lists a melee weapon, a bow of faerdhinen and a staff
 	 * in one slot as a switch loadout. Only one can win the slot, but the

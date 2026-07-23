@@ -428,6 +428,33 @@ public class OwnershipResolver
 	}
 
 	/**
+	 * The task-conditional items and their notes, so the checkbox can show the
+	 * wiki's own wording — conditions are monster-specific ("Only on Fossil
+	 * Island wyvern task") and "on a slayer task" alone overstates them.
+	 * Deduplicated by item name, insertion order preserved.
+	 */
+	public static List<String> slayerConditionalNotes(GearSetup setup)
+	{
+		Map<String, String> byItem = new java.util.LinkedHashMap<>();
+		for (List<RankedItem> alternatives : setup.getSlots().values())
+		{
+			for (RankedItem item : alternatives)
+			{
+				if (isSlayerTaskConditional(item) && item.getNote() != null)
+				{
+					byItem.putIfAbsent(item.getName(), item.getNote());
+				}
+			}
+		}
+		List<String> notes = new ArrayList<>(byItem.size());
+		for (Map.Entry<String, String> e : byItem.entrySet())
+		{
+			notes.add(e.getKey() + " — " + e.getValue());
+		}
+		return notes;
+	}
+
+	/**
 	 * Phrasings that mean "only when you're on a task". The footnote form
 	 * spells out "Slayer task", but the bare parenthetical the pages use just
 	 * as often does not — "(on task)", "(task only)" — so requiring the word

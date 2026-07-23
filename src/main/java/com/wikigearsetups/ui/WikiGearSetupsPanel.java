@@ -137,7 +137,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JComboBox<String> tierCombo = new JComboBox<>();
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
-	private final JCheckBox slayerToggle = new JCheckBox("On a slayer task");
+	private final JCheckBox slayerToggle = new JCheckBox("On this task");
 	private final JCheckBox recommendedToggle = new JCheckBox("Show wiki BIS (ignore my gear)");
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
@@ -371,8 +371,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		slayerToggle.setOpaque(false);
 		slayerToggle.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		slayerToggle.setFocusPainted(false);
-		slayerToggle.setToolTipText("Include recommendations that only apply while on a slayer task, "
-			+ "such as the slayer helmet");
+		// tooltip is set per page from the wiki's own note wording
+		slayerToggle.setToolTipText("Include recommendations that only apply while on this task");
 		CheckBoxIcon.apply(slayerToggle);
 		slayerToggle.addActionListener(e ->
 		{
@@ -1057,6 +1057,26 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final Pattern AUTO_STYLE = Pattern.compile("Setup \\d+");
 
 	/**
+	 * The checkbox tooltip, built from the wiki's own note wording so a
+	 * monster-specific condition ("Only on Fossil Island wyvern task") is
+	 * shown verbatim rather than flattened to "on a slayer task".
+	 */
+	private static String slayerTooltip(List<String> notes)
+	{
+		if (notes.isEmpty())
+		{
+			return "Include recommendations that only apply while on this task";
+		}
+		StringBuilder html = new StringBuilder("<html>Tick to include items the wiki lists "
+			+ "only for this task:<br>");
+		for (String note : notes)
+		{
+			html.append("• ").append(escapeHtml(note)).append("<br>");
+		}
+		return html.append("</html>").toString();
+	}
+
+	/**
 	 * Chooses a distinct, meaningful display label for every setup.
 	 *
 	 * The template's own {@code |style=} is used when it's present and unique.
@@ -1167,13 +1187,21 @@ public class WikiGearSetupsPanel extends PluginPanel
 				? PickStrategy.TOP_RECOMMENDATION : PickStrategy.BEST_OWNED;
 			boolean onSlayerTask = slayerToggle.isSelected();
 			// the enriched setups are what actually gets resolved, so ask them
-			// (not the raw page) whether a task-conditional item is in play
-			boolean slayerRelevant = false;
+			// (not the raw page) whether a task-conditional item is in play, and
+			// collect the wiki's own wording for the checkbox tooltip
+			List<String> slayerNotes = new ArrayList<>();
 			for (GearSetup setup : selectedSetups)
 			{
-				slayerRelevant |= OwnershipResolver.hasSlayerConditional(setup);
+				for (String note : OwnershipResolver.slayerConditionalNotes(setup))
+				{
+					if (!slayerNotes.contains(note))
+					{
+						slayerNotes.add(note);
+					}
+				}
 			}
-			boolean showSlayerToggle = slayerRelevant;
+			boolean showSlayerToggle = !slayerNotes.isEmpty();
+			String slayerTooltip = slayerTooltip(slayerNotes);
 
 			List<SetupResolution> resolutions = new ArrayList<>();
 			List<List<SlotPick>> gearBlocks = new ArrayList<>();
@@ -1247,6 +1275,10 @@ public class WikiGearSetupsPanel extends PluginPanel
 			SwingUtilities.invokeLater(() ->
 			{
 				slayerToggle.setVisible(showSlayerToggle);
+				if (showSlayerToggle)
+				{
+					slayerToggle.setToolTipText(slayerTooltip);
+				}
 				showPreview(resolutions, invResolution, extras, hasSnapshot, previewLayout.getLayout(), unownedIds);
 			});
 		});
