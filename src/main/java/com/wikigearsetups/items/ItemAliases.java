@@ -66,6 +66,9 @@ public final class ItemAliases
 
 		generic("Blessing", "Holy blessing", "Unholy blessing", "Peaceful blessing",
 			"War blessing", "Honourable blessing", "Ancient blessing");
+		// pages write "God blessing" as the family name (Revenants ammo slot)
+		generic("God blessing", "Holy blessing", "Unholy blessing", "Peaceful blessing",
+			"War blessing", "Honourable blessing", "Ancient blessing");
 
 		// Diary rewards: the wiki names the family, the game numbers the tier.
 		// Highest first so the ownership walk lands on the best one held.

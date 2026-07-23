@@ -205,6 +205,11 @@ public class InventoryParser
 	static String cleanSlotValue(String value)
 	{
 		String stripped = stripQuantity(stripMarkup(value));
+		if (stripped.equalsIgnoreCase("placeholder"))
+		{
+			// a deliberately empty grid cell (Maniacal monkeys write "|16=Placeholder")
+			return "";
+		}
 		if (!stripped.isEmpty())
 		{
 			return stripped;
@@ -253,14 +258,26 @@ public class InventoryParser
 	}
 
 	/**
-	 * The template writes a stack size after a backslash ("Blood rune\16000",
-	 * overwhelmingly in {{Rune pouch}}). No item name contains a backslash,
-	 * so anything from the first one on is quantity, not name.
+	 * Strips the two markers the template appends to a name: a stack size
+	 * after a backslash ("Blood rune\16000", overwhelmingly in {{Rune pouch}})
+	 * and a ";n" noted flag ("Iron ore;n" on restock inventories). Values
+	 * carry both ("Shark\200;n"). No item name contains either character, so
+	 * everything from the first one on is a marker, not part of the name.
 	 */
 	static String stripQuantity(String value)
 	{
+		int cut = value.length();
 		int slash = value.indexOf('\\');
-		return slash < 0 ? value : value.substring(0, slash).trim();
+		if (slash >= 0)
+		{
+			cut = slash;
+		}
+		int semi = value.indexOf(';');
+		if (semi >= 0 && semi < cut)
+		{
+			cut = semi;
+		}
+		return cut == value.length() ? value : value.substring(0, cut).trim();
 	}
 
 	/**

@@ -150,6 +150,24 @@ public class InventoryParserTest
 		assertEquals("Shark", InventoryParser.stripQuantity("Shark"));
 	}
 
+	/** ";n" is the noted marker; a value can carry both markers at once. */
+	@Test
+	public void notedMarkerIsStripped()
+	{
+		assertEquals("Iron ore", InventoryParser.stripQuantity("Iron ore;n"));
+		assertEquals("Adamant bar", InventoryParser.stripQuantity("Adamant bar;n"));
+		assertEquals("Shark", InventoryParser.stripQuantity("Shark\\200;n"));
+		assertEquals("Antidote++", InventoryParser.stripQuantity("Antidote++\\50;n"));
+	}
+
+	/** "Placeholder" is a deliberately empty grid cell, not an item. */
+	@Test
+	public void placeholderLiteralBecomesAnEmptySlot()
+	{
+		assertEquals("", InventoryParser.cleanSlotValue("Placeholder"));
+		assertEquals("", InventoryParser.cleanSlotValue("placeholder"));
+	}
+
 	/**
 	 * These pages head every single inventory "==Inventory==", so the nearest
 	 * heading tells the reader nothing. The pane label further back does.

@@ -100,4 +100,34 @@ public class ItemAliasesTest
 		assertTrue("generic name should reach the concrete item", resolved.isPresent());
 		assertTrue(resolved.get().getAcceptableIds().contains(10370));
 	}
+
+	/** "God blessing" is another family name for the same six items. */
+	@Test
+	public void godBlessingResolvesToAConcreteBlessing()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(20220, "Holy blessing");
+		ItemResolver resolver = new ItemResolver(index);
+		assertTrue(resolver.resolve("God blessing").isPresent());
+	}
+
+	/** A bare trailing count and a leading "Open " both fall back to the item. */
+	@Test
+	public void quantityAndOpenStatePrefixFallBackToTheItem()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(995, "Coins", 13226, "Herb sack");
+		ItemResolver resolver = new ItemResolver(index);
+
+		assertEquals(995, resolver.resolve("Coins 10000").get().getPrimaryId());
+		assertEquals(13226, resolver.resolve("Open herb sack").get().getPrimaryId());
+	}
+
+	/** The strips are last-resort: a genuinely numbered item resolves as itself. */
+	@Test
+	public void numberedItemsStillResolveExactlyFirst()
+	{
+		FakeItemNameIndex index = FakeItemNameIndex.of(
+			13124, "Ardougne cloak 4", 13123, "Ardougne cloak 3");
+		ItemResolver resolver = new ItemResolver(index);
+		assertEquals(13124, resolver.resolve("Ardougne cloak 4").get().getPrimaryId());
+	}
 }

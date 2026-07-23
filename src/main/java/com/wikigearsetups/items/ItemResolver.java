@@ -36,6 +36,7 @@ public class ItemResolver
 	private static final Pattern TRAILING_PAREN = Pattern.compile("\\s*\\([^)]*\\)$");
 	private static final Pattern LEADING_QUANTITY = Pattern.compile("^\\d+\\s*[x×]\\s*", Pattern.CASE_INSENSITIVE);
 	private static final Pattern TRAILING_QUANTITY = Pattern.compile("\\s*[x×]\\s*\\d+$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern TRAILING_NUMBER = Pattern.compile("\\s+\\d+$");
 
 	/**
 	 * Empty when the name is unknown — callers should check
@@ -80,6 +81,20 @@ public class ItemResolver
 		if (!noParen.isEmpty())
 		{
 			names.add(noParen);
+		}
+		// a bare trailing count with no "x" ("Coins 10000" -> "Coins"). Tried
+		// after the exact name, so genuinely numbered items ("Ardougne cloak
+		// 4") still resolve as themselves first.
+		String noNumber = TRAILING_NUMBER.matcher(base).replaceFirst("");
+		if (!noNumber.isEmpty() && !noNumber.equals(base))
+		{
+			names.add(noNumber);
+		}
+		// storage sacks are named by their closed form; the wiki writes the
+		// open state ("Open herb sack" -> "Herb sack")
+		if (base.regionMatches(true, 0, "Open ", 0, 5))
+		{
+			names.add(base.substring(5));
 		}
 		if (base.length() > 3 && base.endsWith("s"))
 		{
