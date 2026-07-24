@@ -96,8 +96,8 @@ class DisclaimerPanel extends JPanel
 		content.add(accept);
 		content.add(Box.createVerticalStrut(14));
 
-		JLabel note = paragraph(content, "If you enjoy the plugin, feel free to buy me a coffee "
-			+ "(Donate button below) or share it with a friend :)");
+		JLabel note = paragraph(content,
+			"I hope this makes gearing up a little easier. Good luck out there :)");
 		note.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 
 		content.add(Box.createVerticalStrut(4));
