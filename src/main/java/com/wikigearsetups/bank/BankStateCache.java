@@ -98,6 +98,9 @@ public class BankStateCache
 	/**
 	 * All item ids the player owns: bank snapshot plus live inventory and
 	 * equipment. Must be called on the client thread (reads item containers).
+	 *
+	 * Group Ironman shared group storage is deliberately not included — only
+	 * the player's own bank, inventory and worn gear count as owned.
 	 */
 	public Set<Integer> ownedItemIds()
 	{
