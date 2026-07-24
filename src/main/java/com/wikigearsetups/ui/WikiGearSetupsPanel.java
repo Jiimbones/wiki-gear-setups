@@ -76,6 +76,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStats;
 import net.runelite.client.plugins.banktags.tabs.Layout;
@@ -107,6 +108,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private static final String DEVELOPER_NAME = "Jiimbones";
 	private static final String CARD_MAIN = "main";
 	private static final String CARD_DISCLAIMER = "disclaimer";
+	private static final String DISCLAIMER_ACCEPTED_KEY = "disclaimerAccepted";
 	private static final String DONATION_URL = "https://www.paypal.com/ncp/payment/FQTFP8N8H7P2W";
 	private static final String BUG_REPORT_URL = "https://github.com/Jiimbones/wiki-gear-setups/issues/new";
 
@@ -123,6 +125,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final ItemManager itemManager;
 	private final ClientThread clientThread;
 	private final WikiGearSetupsConfig config;
+	private final ConfigManager configManager;
 	private final CardLayout cards = new CardLayout();
 	private ImageIcon bannerIcon;
 	private boolean bannerLoaded;
@@ -176,7 +179,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	public WikiGearSetupsPanel(WikiClient wikiClient, OwnershipResolver ownershipResolver,
 		InventoryResolver inventoryResolver, BankStateCache bankStateCache,
 		BankTagImporter importer, ItemNameIndex itemNameIndex, ItemManager itemManager,
-		ClientThread clientThread, WikiGearSetupsConfig config)
+		ClientThread clientThread, WikiGearSetupsConfig config, ConfigManager configManager)
 	{
 		super(false);
 		this.iconPicker = new IconPicker(itemManager);
@@ -189,6 +192,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		this.itemManager = itemManager;
 		this.clientThread = clientThread;
 		this.config = config;
+		this.configManager = configManager;
 
 		setLayout(cards);
 		setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
@@ -448,13 +452,19 @@ public class WikiGearSetupsPanel extends PluginPanel
 
 		add(main, CARD_MAIN);
 		add(new DisclaimerPanel(bannerIcon(), this::acceptDisclaimer), CARD_DISCLAIMER);
-		// shown once per session: the panel is built when the plugin starts,
-		// so a fresh client always opens on it
-		cards.show(this, CARD_DISCLAIMER);
+		// shown once per install; "Developed by" in the footer re-opens it any time
+		cards.show(this, disclaimerAccepted() ? CARD_MAIN : CARD_DISCLAIMER);
+	}
+
+	private boolean disclaimerAccepted()
+	{
+		return "1".equals(configManager.getConfiguration(
+			WikiGearSetupsConfig.GROUP, DISCLAIMER_ACCEPTED_KEY));
 	}
 
 	private void acceptDisclaimer()
 	{
+		configManager.setConfiguration(WikiGearSetupsConfig.GROUP, DISCLAIMER_ACCEPTED_KEY, "1");
 		cards.show(this, CARD_MAIN);
 	}
 
@@ -542,47 +552,54 @@ public class WikiGearSetupsPanel extends PluginPanel
 			BorderFactory.createMatteBorder(1, 0, 0, 0, ColorScheme.DARKER_GRAY_HOVER_COLOR),
 			BorderFactory.createEmptyBorder(8, 0, 0, 0)));
 
+		// the bug report is the one action worth a button — everything else is
+		// a quiet link so it draws the eye
 		JButton bugReport = new RoundedButton("Report a bug");
 		bugReport.setToolTipText("Open a GitHub issue — include the page name and a screenshot");
 		bugReport.addActionListener(e -> LinkBrowser.browse(bugReportUrl()));
 		footer.add(fullWidth(bugReport));
-		footer.add(Box.createVerticalStrut(5));
+		footer.add(Box.createVerticalStrut(6));
 
-		JButton donate = new RoundedButton("Donate ♥");
-		donate.addActionListener(e -> LinkBrowser.browse(DONATION_URL));
-		footer.add(fullWidth(donate));
-		footer.add(Box.createVerticalStrut(7));
+		footer.add(linkLabel("Donate ♥", "Support development (opens PayPal)",
+			() -> LinkBrowser.browse(DONATION_URL)));
+		footer.add(Box.createVerticalStrut(6));
 
-		// also the permanent way back to the disclaimer
-		JLabel dev = new JLabel("Developed by " + DEVELOPER_NAME, SwingConstants.CENTER);
-		dev.setFont(FontManager.getRunescapeFont());
-		dev.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		dev.setToolTipText("About / disclaimer");
-		dev.setAlignmentX(LEFT_ALIGNMENT);
-		dev.setMaximumSize(new Dimension(Integer.MAX_VALUE, dev.getPreferredSize().height));
-		dev.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-		dev.addMouseListener(new java.awt.event.MouseAdapter()
+		// the permanent way back to the disclaimer
+		footer.add(linkLabel("Developed by " + DEVELOPER_NAME, "About / disclaimer", this::showDisclaimer));
+		return footer;
+	}
+
+	/** A centered, borderless clickable label — a quiet link rather than a button. */
+	private static JLabel linkLabel(String text, String tooltip, Runnable onClick)
+	{
+		JLabel label = new JLabel(text, SwingConstants.CENTER);
+		label.setFont(FontManager.getRunescapeFont());
+		label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		label.setToolTipText(tooltip);
+		label.setAlignmentX(LEFT_ALIGNMENT);
+		label.setMaximumSize(new Dimension(Integer.MAX_VALUE, label.getPreferredSize().height));
+		label.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+		label.addMouseListener(new java.awt.event.MouseAdapter()
 		{
 			@Override
 			public void mouseClicked(java.awt.event.MouseEvent e)
 			{
-				showDisclaimer();
+				onClick.run();
 			}
 
 			@Override
 			public void mouseEntered(java.awt.event.MouseEvent e)
 			{
-				dev.setForeground(Color.WHITE);
+				label.setForeground(Color.WHITE);
 			}
 
 			@Override
 			public void mouseExited(java.awt.event.MouseEvent e)
 			{
-				dev.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+				label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 			}
 		});
-		footer.add(dev);
-		return footer;
+		return label;
 	}
 
 	private static JButton fullWidth(JButton button)
