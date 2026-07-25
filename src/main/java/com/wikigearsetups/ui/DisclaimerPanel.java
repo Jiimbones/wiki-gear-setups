@@ -52,7 +52,7 @@ class DisclaimerPanel extends JPanel
 		}
 	}
 
-	DisclaimerPanel(Icon banner, Runnable onAccept)
+	DisclaimerPanel(Icon banner, String version, Runnable onAccept)
 	{
 		super(new BorderLayout());
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -106,6 +106,14 @@ class DisclaimerPanel extends JPanel
 		signature.setForeground(HEADING);
 		signature.setAlignmentX(LEFT_ALIGNMENT);
 		content.add(signature);
+
+		// build stamp: the first thing worth knowing about a bug report
+		content.add(Box.createVerticalStrut(8));
+		JLabel build = new JLabel("Version " + version);
+		build.setFont(FontManager.getRunescapeSmallFont());
+		build.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
+		build.setAlignmentX(LEFT_ALIGNMENT);
+		content.add(build);
 
 		JScrollPane scroll = new JScrollPane(new ScrollableWrapper(content),
 			JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);

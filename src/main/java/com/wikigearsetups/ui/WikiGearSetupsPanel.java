@@ -1,6 +1,7 @@
 package com.wikigearsetups.ui;
 
 import com.wikigearsetups.WikiGearSetupsConfig;
+import com.wikigearsetups.WikiGearSetupsPlugin;
 import com.wikigearsetups.bank.BankStateCache;
 import com.wikigearsetups.bank.ExampleGearEnricher;
 import com.wikigearsetups.bank.InventoryPick;
@@ -451,7 +452,8 @@ public class WikiGearSetupsPanel extends PluginPanel
 		main.add(footer(), BorderLayout.SOUTH);
 
 		add(main, CARD_MAIN);
-		add(new DisclaimerPanel(bannerIcon(), this::acceptDisclaimer), CARD_DISCLAIMER);
+		add(new DisclaimerPanel(bannerIcon(), WikiGearSetupsPlugin.VERSION, this::acceptDisclaimer),
+			CARD_DISCLAIMER);
 		// shown once per install; "Developed by" in the footer re-opens it any time
 		cards.show(this, disclaimerAccepted() ? CARD_MAIN : CARD_DISCLAIMER);
 	}

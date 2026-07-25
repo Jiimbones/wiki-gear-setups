@@ -37,7 +37,10 @@ import okhttp3.ResponseBody;
 public class WikiClient
 {
 	static final HttpUrl API = HttpUrl.get("https://oldschool.runescape.wiki/api.php");
-	static final String USER_AGENT = "wiki-gear-setups RuneLite plugin (https://github.com/Jiimbones/wiki-gear-setups)";
+	// wiki policy wants a way to reach the maintainer; the repo's issue tracker
+	// serves that without putting a personal address in every outbound request
+	static final String USER_AGENT =
+		"wiki-gear-setups RuneLite plugin (https://github.com/Jiimbones/wiki-gear-setups)";
 	private static final Duration CACHE_TTL = Duration.ofMinutes(15);
 
 	private final OkHttpClient http;

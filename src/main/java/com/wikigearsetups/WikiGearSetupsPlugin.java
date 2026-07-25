@@ -37,6 +37,16 @@ import net.runelite.client.util.ImageUtil;
 @PluginDependency(BankTagsPlugin.class)
 public class WikiGearSetupsPlugin extends Plugin
 {
+	/**
+	 * Shown in the disclaimer footer so a bug report can name the build.
+	 *
+	 * Hard-coded rather than derived from the build: the hub's `standard`
+	 * build mode replaces build.gradle, so anything gradle injected at
+	 * package time would be lost. Keep in step with build.gradle and
+	 * runelite-plugin.properties when releasing.
+	 */
+	public static final String VERSION = "1.0";
+
 	@Inject
 	private Client client;
 
