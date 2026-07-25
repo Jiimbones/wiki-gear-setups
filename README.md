@@ -38,9 +38,8 @@ Your bank, inventory and equipment are read **locally only**. The bank snapshot 
 
 Ownership is scoped **per RuneScape profile**, and the item index is a full item-definition scan (not a tradeables-only search), so the plugin works across:
 
-- Main, Ironman, Hardcore and Ultimate Ironman
+- Main, Ironman, Hardcore
 - Alts and multiple accounts (each profile's bank is kept separate)
-- Leagues, Deadman and beta worlds
 - Free-to-play
 
 A fresh account that hasn't opened its bank yet is prompted to do so once, rather than guessing.
