@@ -194,5 +194,18 @@ Sequenced per the dev plan; conflicts were measured before coding, not assumed. 
 - [ ] Section-grouped inventory dropdown (Yama's 13) — the only real answer to inventory proliferation
 - [ ] Gating gap: bare "Only on <monster> task" (no "slayer") — needs its own false-positive pass like W1
 
+## Hub submission (2026-07-25)
+- [x] Scroll-range trim under imported tabs (`LayoutScrollTrimmer`, config `trimEmptySpace`); guarded to `importedTags` and shrink-only; 257 tests
+- [x] Artwork: banner 418×381 wordmark, 16×16 nav icon, root `icon.png` 48×48 for the hub listing (wordless art — the wordmark is illegible below ~100px)
+- [x] Version stamp in the disclaimer footer (`WikiGearSetupsPlugin.VERSION`, hard-coded: `build=standard` replaces build.gradle at package time)
+- [x] Manifest: `version=1.0`, `build=standard`, support URL
+- [x] Identity scrub — all 68 commits rewritten to `Jiimbones <249501775+Jiimbones@users.noreply.github.com>`, `Co-Authored-By` trailers dropped, personal address removed from historical file contents (it was in `WikiClient.USER_AGENT`, i.e. on every outbound wiki request); `CLAUDE.md` untracked. Backup: `WikiGearSetups-backups/pre-history-rewrite-20260725-163355.zip`
+- [x] Pushed to https://github.com/Jiimbones/wiki-gear-setups (`main`, 68 commits, 3 tags)
+- [x] Clean-clone build from the published commit: 257 tests, Java 11 bytecode (major 55), resources packed
+- [x] User visual verification in dev client — artwork, version stamp, "On Slayer task", scroll trim incl. drag-below-last-row, foreign tabs unaffected, fresh import (User-Agent change) all confirmed working
+- [x] plugin-hub branch pushed: `Jiimbones/plugin-hub:wiki-gear-setups`, one file `plugins/wiki-gear-setups` pinning `6958fc13`
+- [ ] User to open the PR against `runelite/plugin-hub`
+
 ## Next
-- [ ] GitHub repo creation + push (user to create repo), then hub submission prep (README screenshots, plugin-hub manifest PR)
+- [ ] README screenshots (still the weakest part of the listing — the README describes the plugin without showing it)
+- [ ] On review feedback: amend the pinned commit in the manifest, force-push the same branch, keep it to one PR
