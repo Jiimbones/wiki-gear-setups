@@ -24,6 +24,7 @@ import net.runelite.client.plugins.banktags.tabs.Layout;
 import net.runelite.client.plugins.banktags.tabs.LayoutManager;
 import net.runelite.client.plugins.banktags.tabs.TabManager;
 import net.runelite.client.plugins.banktags.tabs.TagTab;
+import net.runelite.client.util.Text;
 
 /**
  * Writes resolved setups into core Bank Tags: tags each picked item, saves
@@ -98,6 +99,27 @@ public class BankTagImporter
 			return Existing.NONE;
 		}
 		return importedTags().contains(tag) ? Existing.OURS : Existing.FOREIGN;
+	}
+
+	/**
+	 * Whether this plugin created the tab under {@code tag}. Standardized on
+	 * both sides because core hands back the tag as the player sees it.
+	 */
+	public boolean wasImported(String tag)
+	{
+		if (tag == null || tag.isEmpty())
+		{
+			return false;
+		}
+		String wanted = Text.standardize(tag);
+		for (String imported : importedTags())
+		{
+			if (wanted.equals(Text.standardize(imported)))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private Set<String> importedTags()

@@ -5,13 +5,16 @@ import com.google.inject.Provides;
 import com.wikigearsetups.bank.BankStateCache;
 import com.wikigearsetups.items.ClientItemNameIndex;
 import com.wikigearsetups.items.ItemNameIndex;
+import com.wikigearsetups.layout.LayoutScrollTrimmer;
 import com.wikigearsetups.ui.WikiGearSetupsPanel;
 import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.ScriptID;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.config.ConfigManager;
@@ -48,6 +51,9 @@ public class WikiGearSetupsPlugin extends Plugin
 
 	@Inject
 	private WikiGearSetupsPanel panel;
+
+	@Inject
+	private LayoutScrollTrimmer layoutScrollTrimmer;
 
 	private NavigationButton navButton;
 
@@ -97,6 +103,17 @@ public class WikiGearSetupsPlugin extends Plugin
 		// fires once the RS profile is known post-login, and on world hops
 		// across profile boundaries (e.g. leagues) — reload the right snapshot
 		bankStateCache.loadSnapshot();
+	}
+
+	@Subscribe
+	public void onScriptPostFired(ScriptPostFired event)
+	{
+		// after the bank has finished building, so core Bank Tags has already
+		// laid the tab out and the vanilla scrollbar height is in place
+		if (event.getScriptId() == ScriptID.BANKMAIN_FINISHBUILDING)
+		{
+			layoutScrollTrimmer.onBankBuilt();
+		}
 	}
 
 	@Subscribe

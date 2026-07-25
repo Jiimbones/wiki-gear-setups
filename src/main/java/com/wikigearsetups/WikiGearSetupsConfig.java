@@ -90,11 +90,24 @@ public interface WikiGearSetupsConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "trimEmptySpace",
+		name = "Trim space below layout",
+		description = "Stop the bank scrolling past the end of a tab this plugin created. Bank Tags fills "
+			+ "every unused slot in your whole bank with an empty drop target, so a big bank scrolls through "
+			+ "a lot of nothing. Turn off to keep the full scroll range for dragging items in.",
+		position = 5
+	)
+	default boolean trimEmptySpace()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "tagPrefix",
 		name = "Tag name prefix",
 		description = "Prepended to every tab this plugin creates (e.g. 'wgs') so they sort together in Bank "
 			+ "Tags and never collide with your own tabs. Leave blank for no prefix.",
-		position = 5
+		position = 6
 	)
 	default String tagPrefix()
 	{
