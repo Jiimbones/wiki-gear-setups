@@ -141,7 +141,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 	private final JComboBox<String> tierCombo = new JComboBox<>();
 	private final JComboBox<String> setupCombo = new JComboBox<>();
 	private final JComboBox<String> inventoryCombo = new JComboBox<>();
-	private final JCheckBox slayerToggle = new JCheckBox("On this task");
+	private final JCheckBox slayerToggle = new JCheckBox("On Slayer task");
 	private final JCheckBox recommendedToggle = new JCheckBox("Show wiki BIS (ignore my gear)");
 	private final JPanel gridPanel = new JPanel();
 	private final JPanel previewPanel = new JPanel();
@@ -377,7 +377,7 @@ public class WikiGearSetupsPanel extends PluginPanel
 		slayerToggle.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
 		slayerToggle.setFocusPainted(false);
 		// tooltip is set per page from the wiki's own note wording
-		slayerToggle.setToolTipText("Include recommendations that only apply while on this task");
+		slayerToggle.setToolTipText("Include recommendations that only apply while on a Slayer task");
 		CheckBoxIcon.apply(slayerToggle);
 		slayerToggle.addActionListener(e ->
 		{
