@@ -32,7 +32,8 @@ import net.runelite.client.util.ImageUtil;
 @PluginDescriptor(
 	name = "Wiki Gear Setups",
 	description = "Import recommended gear setups from the OSRS Wiki as bank tag layouts, built from the gear you own",
-	tags = {"bank", "tag", "layout", "gear", "equipment", "wiki", "setup"}
+	tags = {"bank", "tag", "layout", "gear", "equipment", "wiki", "setup",
+		"bis", "best in slot", "loadout", "boss", "pvm", "raids"}
 )
 @PluginDependency(BankTagsPlugin.class)
 public class WikiGearSetupsPlugin extends Plugin
