@@ -215,7 +215,7 @@ Found by re-running the parsers over the live wiki — the fixtures were four mo
 - [x] Fixtures: Doom of Mokhaiotl, Kree'arra, Zulrah (Loadout); 277 tests; RuneLite 1.13.8, no deprecation warnings
 - [x] Version 1.0.1 in manifest, `build.gradle`, `WikiGearSetupsPlugin.VERSION`
 - [ ] Not verified in a live client: dev login was removed for security (2026-07). Parser-level change; downstream resolver, pairing and layout code is unchanged
-- [ ] User to open the plugin-hub update PR
+- [x] Plugin-hub update PR opened: runelite/plugin-hub#21288 (pins `6b81b82`)
 
 ## Next
 - [ ] README screenshots (still the weakest part of the listing — the README describes the plugin without showing it)
