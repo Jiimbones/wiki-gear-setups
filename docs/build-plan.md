@@ -204,8 +204,21 @@ Sequenced per the dev plan; conflicts were measured before coding, not assumed. 
 - [x] Clean-clone build from the published commit: 257 tests, Java 11 bytecode (major 55), resources packed
 - [x] User visual verification in dev client — artwork, version stamp, "On Slayer task", scroll trim incl. drag-below-last-row, foreign tabs unaffected, fresh import (User-Agent change) all confirmed working
 - [x] plugin-hub branch pushed: `Jiimbones/plugin-hub:wiki-gear-setups`, one file `plugins/wiki-gear-setups` pinning `6958fc13`
-- [ ] User to open the PR against `runelite/plugin-hub`
+- [x] PR opened (#14281); merged 2026-08-21, pinning `e836b8d`
+
+## 1.0.1 (2026-11-25)
+Found by re-running the parsers over the live wiki — the fixtures were four months stale.
+- [x] Search tags `bis`, `best in slot`, `loadout`, `boss`, `pvm`, `raids` (committed 2026-09-30; the update PR was never opened, so it ships here)
+- [x] `2h#` two-handed column read into the weapon slot; same-rank merge instead of overwrite; `EquipSlot` alternate names
+- [x] `{{Loadout}}` inventories + runes (Zulrah); `SetupPairing` shares `InventoryParser.isInventoryTemplate`
+- [x] Skips made visible: `unrecognisedParams`, `unrankedSlotParams`, `unrecognisedInventoryTemplates`, `TemplateCoverageTest`, `./gradlew corpusCheck`
+- [x] Fixtures: Doom of Mokhaiotl, Kree'arra, Zulrah (Loadout); 277 tests; RuneLite 1.13.8, no deprecation warnings
+- [x] Version 1.0.1 in manifest, `build.gradle`, `WikiGearSetupsPlugin.VERSION`
+- [ ] Not verified in a live client: dev login was removed for security (2026-07). Parser-level change; downstream resolver, pairing and layout code is unchanged
+- [ ] User to open the plugin-hub update PR
 
 ## Next
 - [ ] README screenshots (still the weakest part of the listing — the README describes the plugin without showing it)
-- [ ] On review feedback: amend the pinned commit in the manifest, force-push the same branch, keep it to one PR
+- [ ] Before every release: `./gradlew corpusCheck`
+- [ ] Wiki fix anyone can make: Thermonuclear smoke devil/Strategies `|weapon =` should be `|weapon2 =` (the page never shows the Ghrazi rapier)
+- [ ] Auto-layout bank button (planned 2026-08; parked until after the first merge, now unblocked)

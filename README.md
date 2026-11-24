@@ -51,8 +51,9 @@ A fresh account that hasn't opened its bank yet is prompted to do so once, rathe
 Requires JDK 11+.
 
 ```
-./gradlew test    # run the test suite
-./gradlew run     # launch a dev-mode client with the plugin loaded
+./gradlew test          # run the test suite
+./gradlew run           # launch a dev-mode client with the plugin loaded
+./gradlew corpusCheck   # before a release: run the parsers over every live wiki page they read
 ```
 
 ## License

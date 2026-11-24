@@ -3,29 +3,45 @@ package com.wikigearsetups.wiki;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 import lombok.extern.slf4j.Slf4j;
 
 import static com.wikigearsetups.wiki.GearSetupParser.findTemplateEnd;
 import static com.wikigearsetups.wiki.GearSetupParser.indexOfTopLevel;
+import static com.wikigearsetups.wiki.GearSetupParser.namedParam;
 import static com.wikigearsetups.wiki.GearSetupParser.splitTopLevel;
 import static com.wikigearsetups.wiki.GearSetupParser.stripMarkup;
 import static com.wikigearsetups.wiki.GearSetupParser.templateName;
 
 /**
- * Extracts {{Inventory}} templates and their trailing {{Rune pouch}}.
+ * Extracts inventories: {{Inventory}} with its trailing {{Rune pouch}}, and
+ * {{Loadout}}, which carries both in one template.
  *
  * Slots may be numbered ("|1=Twisted bow", Zulrah style) or positional
  * ("|Giant pouch |Large pouch |...", GotR style) — positional params count
  * empty cells too, preserving grid positions. Labels come from the nearest
- * preceding tabber pane label or section heading, since the template has no
+ * preceding tabber pane label or section heading, since {{Inventory}} has no
  * style param of its own. A {{Rune pouch}} attaches to the inventory that
  * precedes it.
+ *
+ * {{Loadout}} numbers its 28 slots the same way and holds its runes in
+ * "rune1"-"rune4". Its gear fields are not read: the {{Equipment}} panels
+ * that sat beside these inventories before were never read either, and the
+ * page's {{Recommended equipment}} is where its gear comes from.
  */
 @Slf4j
 public class InventoryParser
 {
 	private static final int SLOTS = 28;
 	private static final int RUNE_SLOTS = 4;
+	/**
+	 * Numbered slots at which an unread template looks like an inventory. A
+	 * real inventory fills far more than this; ordinary templates take a
+	 * handful of numbered params at most.
+	 */
+	private static final int INVENTORY_SHAPED = 10;
 
 	/**
 	 * Joins the candidates of a choice template into one slot value. No item
@@ -72,6 +88,19 @@ public class InventoryParser
 				if (slots != null)
 				{
 					pending.add(new Pending(labelFor(wikitext, i, pending.size() + 1), slots));
+				}
+				i = end;
+			}
+			else if (name.equalsIgnoreCase("loadout"))
+			{
+				// named gear params ("head=") aren't numbers, so only the
+				// 28 inventory slots fill the grid
+				List<String> slots = parseSlots(body, SLOTS);
+				if (slots != null)
+				{
+					Pending loadout = new Pending(loadoutLabel(wikitext, i, body, pending.size() + 1), slots);
+					loadout.runes = loadoutRunes(body);
+					pending.add(loadout);
 				}
 				i = end;
 			}
@@ -258,5 +287,103 @@ public class InventoryParser
 	{
 		String label = SectionLabels.precedingLabel(wikitext, templateStart);
 		return label != null ? label : "Inventory " + index;
+	}
+
+	/**
+	 * A loadout names itself, but the page's own pane or heading label wins
+	 * when there is one. Zulrah's loadouts sit under the same tab labels its
+	 * {{Inventory}} templates did ("Magic Only", "Ranged Only"), so the
+	 * dropdown reads exactly as it did before the page was converted;
+	 * "loadoutname" fills in only where the page gives no label of its own.
+	 */
+	static String loadoutLabel(String wikitext, int templateStart, String body, int index)
+	{
+		String label = SectionLabels.precedingLabel(wikitext, templateStart);
+		if (label != null)
+		{
+			return label;
+		}
+		String name = namedParam(body, "loadoutname");
+		return name != null ? name : "Inventory " + index;
+	}
+
+	/** The loadout's rune pouch, "rune1"-"rune4", in pouch order. */
+	private static List<String> loadoutRunes(String body)
+	{
+		List<String> runes = new ArrayList<>(RUNE_SLOTS);
+		for (int r = 0; r < RUNE_SLOTS; r++)
+		{
+			runes.add("");
+		}
+		for (String part : splitTopLevel(body, '|'))
+		{
+			int eq = indexOfTopLevel(part, '=');
+			if (eq < 0)
+			{
+				continue;
+			}
+			String name = part.substring(0, eq).trim().toLowerCase(Locale.ROOT);
+			if (name.length() == 5 && name.startsWith("rune")
+				&& name.charAt(4) >= '1' && name.charAt(4) <= '0' + RUNE_SLOTS)
+			{
+				runes.set(name.charAt(4) - '1', cleanSlotValue(part.substring(eq + 1)));
+			}
+		}
+		return compact(runes);
+	}
+
+	/** Whether a template holds an inventory this parser reads. */
+	public static boolean isInventoryTemplate(String templateName)
+	{
+		return templateName.equalsIgnoreCase("inventory") || templateName.equalsIgnoreCase("loadout");
+	}
+
+	/**
+	 * Templates on the page laid out like an inventory — ten or more numbered
+	 * slots — that this parser does not read. {{Loadout}} arrived exactly this
+	 * way: Zulrah's inventories moved into it and silently stopped importing.
+	 * Empty means every inventory on the page is accounted for.
+	 */
+	public static Set<String> unrecognisedInventoryTemplates(String rawWikitext)
+	{
+		Set<String> unread = new TreeSet<>();
+		if (rawWikitext == null || rawWikitext.isEmpty())
+		{
+			return unread;
+		}
+		String wikitext = GearSetupParser.normalizeLineEndings(rawWikitext);
+		int i = 0;
+		while ((i = wikitext.indexOf("{{", i)) >= 0)
+		{
+			int end = findTemplateEnd(wikitext, i);
+			if (end > 0)
+			{
+				String body = wikitext.substring(i + 2, end - 2);
+				String name = templateName(body);
+				if (!isInventoryTemplate(name) && !name.equalsIgnoreCase("rune pouch")
+					&& numberedParams(body) >= INVENTORY_SHAPED)
+				{
+					unread.add(name);
+				}
+			}
+			// always step inside: inventories nest in tables and tabbers
+			i += 2;
+		}
+		return unread;
+	}
+
+	private static int numberedParams(String body)
+	{
+		int count = 0;
+		List<String> parts = splitTopLevel(body, '|');
+		for (int p = 1; p < parts.size(); p++)
+		{
+			int eq = indexOfTopLevel(parts.get(p), '=');
+			if (eq > 0 && parts.get(p).substring(0, eq).trim().matches("[0-9]+"))
+			{
+				count++;
+			}
+		}
+		return count;
 	}
 }

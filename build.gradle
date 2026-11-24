@@ -28,7 +28,7 @@ dependencies {
 }
 
 group = 'com.wikigearsetups'
-version = '1.0'
+version = '1.0.1'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
@@ -41,6 +41,16 @@ tasks.register('run', JavaExec) {
 
 	jvmArgs "-ea"
 	args "--developer-mode", "--debug"
+}
+
+// Pre-release check against the live wiki (needs network): runs the parsers
+// over every page using {{Recommended equipment}} and fails if anything goes
+// unread. Dev only — the plugin hub's standard build replaces this file.
+tasks.register('corpusCheck', JavaExec) {
+	group = 'verification'
+	description = 'Runs the parsers over every live wiki page that uses {{Recommended equipment}}'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.wikigearsetups.tools.CorpusCheck'
 }
 
 tasks.register('shadowJar', Jar) {

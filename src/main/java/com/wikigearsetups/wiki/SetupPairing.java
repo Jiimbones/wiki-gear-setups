@@ -96,8 +96,11 @@ public final class SetupPairing
 				order.append('E');
 				i = end;
 			}
-			else if (name.equalsIgnoreCase("inventory"))
+			else if (InventoryParser.isInventoryTemplate(name))
 			{
+				// the parser's own rule, so the two counts can't drift apart:
+				// counting a template the parser doesn't read would disable
+				// pairing for the whole page
 				order.append('I');
 				i = end;
 			}
